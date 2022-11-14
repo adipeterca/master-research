@@ -20,6 +20,7 @@ class ImageConvertor:
         grayscale_image.show()
         if save:
             grayscale_image.save('simple_average.jpg')
+        return grayscale_image
     
     def weighted_average(self, method = 1, save = False):
         grayscale_pixels = []
@@ -38,6 +39,7 @@ class ImageConvertor:
         grayscale_image.show()
         if save:
             grayscale_image.save('weighted_average.jpg')
+        return grayscale_image
     
     def desaturation(self, save = False):
         grayscale_pixels = []
@@ -51,6 +53,7 @@ class ImageConvertor:
         grayscale_image.show()
         if save:
             grayscale_image.save('desaturation.jpg')
+        return grayscale_image
     
     def decomposition(self, method='max', save=False):
         grayscale_pixels = []
@@ -67,6 +70,7 @@ class ImageConvertor:
         grayscale_image.show()
         if save:
             grayscale_image.save('decomposition.jpg')
+        return grayscale_image
 
     def single_color_channel(self, method='r', save=False):
         grayscale_pixels = []
@@ -85,6 +89,7 @@ class ImageConvertor:
         grayscale_image.show()
         if save:
             grayscale_image.save('single_color_channel.jpg')
+        return grayscale_image
 
     def gray_shades(self, shades=2, save=False):
         '''
@@ -115,6 +120,7 @@ class ImageConvertor:
         grayscale_image.show()
         if save:
             grayscale_image.save('gray_shades.jpg')
+        return grayscale_image
 
     def floyd_steinberg(self, save=False):
         image_arr = []
@@ -151,6 +157,7 @@ class ImageConvertor:
         grayscale_image.show()
         if save:
             grayscale_image.save('floyd_steinberg.jpg')
+        return grayscale_image
         
     def burkes(self, save=False):
         image_arr = []
@@ -187,15 +194,27 @@ class ImageConvertor:
         grayscale_image.show()
         if save:
             grayscale_image.save('burkes.jpg')
+        return grayscale_image
+
+    def rgb(self, grayscale_image, save=False):
+        rgb_image = Image.new('RGB', grayscale_image.size)
+        rgb_pixels = [(x, x, x) for x in list(grayscale_image.getdata())]
+        rgb_image.putdata(rgb_pixels)
+        rgb_image.show()
+        if save:
+            rgb_image.save('rgb_image.jpg')
+
+
 
 if __name__ == '__main__':
     img_conv = ImageConvertor()
 
-    # img_conv.simple_average()
+    img = img_conv.simple_average()
+    img_conv.rgb(img)
     # img_conv.weighted_average(method=1)
     # img_conv.desaturation()
     # img_conv.decomposition()
     # img_conv.single_color_channel()
     # img_conv.gray_shades()
     # img_conv.floyd_steinberg()
-    img_conv.burkes()
+    # img_conv.burkes()
