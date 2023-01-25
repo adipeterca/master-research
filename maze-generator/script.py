@@ -24,14 +24,14 @@ def generate(max_count, _map, i_start, j_start):
 def generate2(_map):
     for i in range(len(_map)):
         for j in range(len(_map[0])):
-            if j % 2 == 0 and i % 2 == 0:
+            if j % 2 == 0 and i % 2 == 0 and random() < 0.3:
                 _map[i][j] = EMPTY
     
     for i in range(len(_map)):
         for j in range(len(_map[0])):
-            if j % 2 == 1 and random() < 0.4:
+            if j % 2 == 1 and random() < 0.6:
                 _map[i][j] = EMPTY
-                if random() < 0.7:
+                if random() < 0.5:
                     j += randint(1, 4)
 
 def generate3(_map, start_i, start_j, max_count = 1000):
@@ -69,21 +69,23 @@ def generate3(_map, start_i, start_j, max_count = 1000):
                 j += -1
                 distance -= 1
 
-size = 256
+size = 64
 img = Image.new('L', (size, size))
 l = np.zeros((size, size))
 
-# for i in range(800):
+# for i in range(10):
 #     generate(50, l, randint(0, size-1), randint(0, size-1))
-# for i in range(2500):
+# for i in range(250):
 #     generate(15, l, randint(0, size-1), randint(0, size-1))
 # generate2(l)
 
 # Best approach
-for i in range(size):
-    for j in range(size):
-        if i % (size // 10) == 0 and j % (size // 10) == 0:
-            generate3(l, i, j, 50)
+# for i in range(size):
+#     for j in range(size):
+#         if i % (size // 5) == 0 and j % (size // 5) == 0:
+#             generate3(l, i, j, 9)
+
+generate2(l)
 
 img.putdata(array2d_to_list(l, size))
-img.save('phto.png')
+img.save('photo.png')
