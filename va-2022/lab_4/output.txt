@@ -1,0 +1,31 @@
+Starting program execution...
+
+Train set size: 10015
+Batch size: 32
+Number of batches (rounded): 312
+Train/Test procentages: 70.00% / 30.00%
+
+Loading input image paths...
+Done!
+
+Loading output image paths...
+Done!
+
+Building model (errors are ignored)...
+2022-12-19 19:06:13.704013: I tensorflow/core/platform/cpu_feature_guard.cc:193] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX AVX2
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+Done!
+
+Created TRAIN dataset with 219 number of batches, each batch with 32 tuples of (input, output).
+Epoch 1/5
+219/219 [==============================] - 1668s 8s/step - loss: 0.4710 - accuracy: 0.8480 - jaccard_index: 0.2709 - dice_coefficient: 0.4250
+Epoch 2/5
+219/219 [==============================] - 1420s 6s/step - loss: 0.2985 - accuracy: 0.7915 - jaccard_index: 0.2709 - dice_coefficient: 0.4250
+Epoch 3/5
+219/219 [==============================] - 1429s 7s/step - loss: 0.2263 - accuracy: 0.7521 - jaccard_index: 0.2709 - dice_coefficient: 0.4250
+Epoch 4/5
+219/219 [==============================] - 1425s 6s/step - loss: 0.1909 - accuracy: 0.7452 - jaccard_index: 0.2709 - dice_coefficient: 0.4250
+Epoch 5/5
+219/219 [==============================] - 1418s 6s/step - loss: 0.1794 - accuracy: 0.7455 - jaccard_index: 0.2709 - dice_coefficient: 0.4250
+Created TEST dataset with 93 number of batches, each batch with 32 tuples of (input, output).
+93/93 [==============================] - 309s 3s/step - loss: 0.1463 - accuracy: 0.7671 - jaccard_index: 0.2560 - dice_coefficient: 0.4066

@@ -165,13 +165,13 @@ def threshold(image : cv2.Mat, _type = cv2.THRESH_BINARY):
     return new_image
 
 if __name__ == '__main__':
-    path = 'test_2.jpg'
+    path = 'test_1.jpg'
 
     image_rgb = cv2.imread(path)
     image_gray = cv2.cvtColor(image_rgb, cv2.COLOR_BGR2GRAY)
 
     # image_new = image_gray
-    # image_new = noise(image_gray)
+    image_new = noise(image_gray)
     # image_new = rotate(image_gray)
     # image_new = shear(image_gray, 'x')
     # image_new = resize(image_gray, 50, 400)
@@ -181,7 +181,7 @@ if __name__ == '__main__':
     # image_new = dilation(image_gray)
     # image_new = opening(image_gray)
     # image_new = closing(image_gray)
-    image_new = threshold(image_gray)
+    # image_new = threshold(image_gray)
 
     new_path = 'gray_modified_' + path
     cv2.imwrite(new_path, image_new)
