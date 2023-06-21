@@ -99,24 +99,26 @@ def squared_relu(x):
 def test():
     from keras.models import load_model
     from keras.utils import custom_object_scope
-    from keras.layers import Activation
 
     with custom_object_scope({'squared_relu': squared_relu}):
-        model = load_model('generator.h5')
+        model = load_model('generator_epoch_10.h5')
 
-    latent_input = generate_latent_space(100, 1)
-    # latent_input = np.ones(shape=(1, 100))
+    for i in range(25):
 
-    output = model.predict(latent_input)
-    output = np.squeeze(output, axis=0)
-    # output = output * 255
-    output = np.where(output > 0.5, 255, 0)
-    cv2.imwrite('output.png', output)
-    cv2.waitKey()
+        latent_input = generate_latent_space(100, 1)
+        # latent_input = np.ones(shape=(1, 100))
+
+        output = model.predict(latent_input)
+        output = np.squeeze(output, axis=0)
+        # output = output * 255
+        cv2.imwrite(f'10/no_threshold_{i}.png', output * 255)
+        output = np.where(output > 0.5, 255, 0)
+        cv2.imwrite(f'10/{i}.png', output)
+    # cv2.waitKey()
 
 if __name__ == '__main__':
-    # test()
-    build_and_train()
+    test()
+    # build_and_train()
 
 # import tensorflow as tf
 # physical_devices = tf.config.list_physical_devices('GPU')
