@@ -41,6 +41,9 @@ def generate_fake_samples(generator : Sequential, latent_dim_size=100, n_samples
 
     return x, y
 
+def squared_relu(x):
+    return K.relu(x) ** 2
+
 def train_gan(generator : Sequential, discriminator : Sequential, gan : Sequential, dataset, latent_dim_size=100, epochs=10, batch_size=16):
     '''
     @dataset : Python list of numpy arrays representing images
@@ -51,10 +54,16 @@ def train_gan(generator : Sequential, discriminator : Sequential, gan : Sequenti
     batches_per_epoch = int((len(dataset) / batch_size))
     half_batch = int(batches_per_epoch / 2)
 
+    current_version = 1
+    while os.path.exists(f'v1.{current_version}'):
+        current_version += 1
+    
+    print(f'\nBUILDING VERSION v1.{current_version}\n\n')
+
     for epoch in range(epochs):
-        if epoch % 10 == 0 and epoch > 0:
+        if epoch % 1 == 0 and epoch > 0:
             print(f'Saved generator for epoch {epoch}')
-            generator.save(f'generator_epoch_{epoch}.h5')
+            generator.save(f'v1.{current_version}/generator_epoch_{epoch}.h5')
         for b in range(batches_per_epoch):
             
             # First, train the discriminator
@@ -73,9 +82,10 @@ def train_gan(generator : Sequential, discriminator : Sequential, gan : Sequenti
             
             print(f'[epoch {epoch+1}/{epochs}][batch {b+1}/{batches_per_epoch}] d_loss_real: {d_loss_real:.4f}, d_loss_fake: {d_loss_fake:.4f}, gan_loss: {gan_loss:.4f}')
     
-    generator.save(f'generator_final_epoch_{epochs}.h5')
+    generator.save(f'v1.{current_version}/generator_epoch_{epochs}.h5')
 
-
+############################################################################################################################################################
+############################################################################################################################################################
 
 def build_and_train():
     g = generator.build_grayscale()
@@ -91,42 +101,52 @@ def build_and_train():
         if len(dataset) % 1000 == 0:
             print(f'Loaded {len(dataset)} images')
 
-    train_gan(g, d, gan, dataset, epochs=50, batch_size=512)
+    train_gan(g, d, gan, dataset, epochs=5, batch_size=128)
 
-def squared_relu(x):
-    return K.relu(x) ** 2
 
 def test():
     from keras.models import load_model
     from keras.utils import custom_object_scope
+    from keras.utils.vis_utils import plot_model
+    import time
 
-    with custom_object_scope({'squared_relu': squared_relu}):
-        model = load_model('generator_epoch_10.h5')
+    model_version = 'v1.top'
+    # model_id = '1'
 
-    for i in range(25):
+    for model_id in range(1, 4):
+        with custom_object_scope({'squared_relu': squared_relu}):
+            model = load_model(f'{model_version}/{model_id}.h5')
 
-        latent_input = generate_latent_space(100, 1)
-        # latent_input = np.ones(shape=(1, 100))
+            total = 0
+            for i in range(1000):
+                start_time = time.time()
+                latent_input = generate_latent_space(100, 1)
+                model.predict(latent_input, verbose=0)
+                stop_time = time.time()
+                total = stop_time - start_time
+            avg_speed = total/1000
+            print(avg_speed)
 
-        output = model.predict(latent_input)
-        output = np.squeeze(output, axis=0)
-        # output = output * 255
-        cv2.imwrite(f'10/no_threshold_{i}.png', output * 255)
-        output = np.where(output > 0.5, 255, 0)
-        cv2.imwrite(f'10/{i}.png', output)
-    # cv2.waitKey()
+    # with custom_object_scope({'squared_relu': squared_relu}):
+        # model = load_model(f'{model_version}/generator_epoch_{model_id}.h5')
+
+    # plot_model(model, to_file=f'architecture_{model_id}.png', show_shapes=True, rankdir='LR')
+    # os.makedirs(f'{model_version}/{model_id}/')
+
+    
+
+    # for i in range(5):
+
+        # latent_input = generate_latent_space(100, 1)
+
+        # output = model.predict(latent_input)
+        # output = np.squeeze(output, axis=0)
+        # threshold = np.mean(output)
+        # output = np.where(output > threshold, 255, 0)
+
+        # # cv2.imwrite(f'{model_version}/{model_id}/{i}.png', output)
+        # cv2.imwrite(f'test_output.png', output)
 
 if __name__ == '__main__':
     test()
     # build_and_train()
-
-# import tensorflow as tf
-# physical_devices = tf.config.list_physical_devices('GPU')
-# if physical_devices:
-#     for device in physical_devices:
-#         tf.config.experimental.set_memory_growth(device, True)
-#     print("Num GPUs Available: ", len(physical_devices))
-# else:
-#     print("No GPUs Available")
-# exit()
-

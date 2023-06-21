@@ -13,30 +13,30 @@ def build_grayscale():
     model = Sequential()
 
     # Latent space of 100
-    model.add(Dense(512, input_shape=(100,)))
+    model.add(Dense(256, input_shape=(100,)))
     model.add(BatchNormalization(momentum=0.9))
     model.add(Activation(squared_relu))
     
-    model.add(Dense(1024))
+    model.add(Dense(256))
     model.add(BatchNormalization(momentum=0.9))
     model.add(Activation(squared_relu))
 
-    model.add(Dense(2048))
+    model.add(Dense(256))
     model.add(BatchNormalization(momentum=0.9))
     model.add(Activation(squared_relu))
     
-    model.add(Reshape((16, 16, 8)))
-
-    model.add(Conv2DTranspose(filters=128, kernel_size=(3, 3), strides=(2, 2), padding='same'))
-    model.add(BatchNormalization(momentum=0.8))
-    model.add(Activation(squared_relu))
+    model.add(Reshape((16, 16, 1)))
 
     model.add(Conv2DTranspose(filters=64, kernel_size=(3, 3), strides=(2, 2), padding='same'))
-    model.add(BatchNormalization(momentum=0.8))
+    model.add(BatchNormalization(momentum=0.9))
+    model.add(Activation(squared_relu))
+
+    model.add(Conv2DTranspose(filters=32, kernel_size=(3, 3), strides=(2, 2), padding='same'))
+    model.add(BatchNormalization(momentum=0.9))
     model.add(Activation(squared_relu))
 
     model.add(Conv2DTranspose(filters=1, kernel_size=(3, 3), strides=(1, 1), padding='same'))
-    model.add(BatchNormalization(momentum=0.8))
+    model.add(BatchNormalization(momentum=0.9))
     model.add(Activation(squared_relu))
 
     # model.add(Conv2DTranspose(filters=32, kernel_size=(3, 3), strides=(2, 2), padding='same', activation='relu'))

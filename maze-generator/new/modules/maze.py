@@ -50,21 +50,70 @@ class Maze:
                 self.data[x][y-1].walls[Maze.EAST] = False
         except:
             pass
+
+    def path_to_cell(self, x1, y1, x2, y2):
+        '''
+        Simillar to path, but it accepts two adjacent cells.
+
+        '''
+        if abs(x1-x2) != 1 and abs(y1-y2) != 1:
+            raise ValueError(f'Incorrect values provided! Cells need to be adjacent and different: ({x1}, {y1}), ({x2}, {y2})')
+        
+        if not self.is_valid_position(x1, y1):
+            raise ValueError(f'Incorrect values for x or/and y: ({x1}, {y1}). They must be between [0, {self.size})\n')
+        
+        if not self.is_valid_position(x2, y2):
+            raise ValueError(f'Incorrect values for x or/and y: ({x2}, {y2}). They must be between [0, {self.size})\n')
+        
+        # Figure out the direction
+        dir = None
+        if x1 < x2:
+            dir = Maze.SOUTH
+        elif x1 > x2:
+            dir = Maze.NORTH
+        elif y1 < y2:
+            dir = Maze.EAST
+        else:
+            dir = Maze.WEST
+        
+        self.path(x1, y1, dir)
     
     def is_valid_position(self, x, y):
         return x >= 0 and y >= 0 and x < self.rows and y < self.columns
 
-    def export(self, distance = 10, output = None, show=True):
+    def export(self, distance = 10, output = None, show=True, current_cell=None, visited_cells=None):
+        '''
+        Exports the maze to an image.
+        @distance: the distance of each cell
+        @output: path to file
+        @show: display the final result
+        @current_cell: if set, it will color with red the current cell. Used for GIF creation. MUST BE A set() OBJECT
+        @visited_cells: if set, it will color any cell from the visited_cells set() object. Used for GIF creation.
+        '''
         new_data = np.zeros((self.rows * distance, self.columns * distance, 3), dtype=np.uint8)
 
         for i in range(self.rows):
             for j in range(self.columns):
+
                 # Assign no walls at first
-                for k1 in range(distance):
-                    for k2 in range(distance):
-                        new_data[i*distance+k1][j*distance+k2][0] = 255
-                        new_data[i*distance+k1][j*distance+k2][1] = 255
-                        new_data[i*distance+k1][j*distance+k2][2] = 255
+                if current_cell != None and current_cell == (i, j):
+                    for k1 in range(distance):
+                        for k2 in range(distance):
+                            new_data[i*distance+k1][j*distance+k2][0] = 255
+                            new_data[i*distance+k1][j*distance+k2][1] = 0
+                            new_data[i*distance+k1][j*distance+k2][2] = 0
+                elif visited_cells != None and (i, j) in visited_cells:
+                    for k1 in range(distance):
+                        for k2 in range(distance):
+                            new_data[i*distance+k1][j*distance+k2][0] = 0
+                            new_data[i*distance+k1][j*distance+k2][1] = 255
+                            new_data[i*distance+k1][j*distance+k2][2] = 0
+                else:
+                    for k1 in range(distance):
+                        for k2 in range(distance):
+                            new_data[i*distance+k1][j*distance+k2][0] = 255
+                            new_data[i*distance+k1][j*distance+k2][1] = 255
+                            new_data[i*distance+k1][j*distance+k2][2] = 255
                 
                 # West wall
                 # For east wall, it should be j*distance+(distance-1)
