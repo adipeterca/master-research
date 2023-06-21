@@ -1,6 +1,10 @@
 import numpy as np
 from keras.models import Sequential
-from keras.layers import Dense, Conv2DTranspose, Reshape, Conv2D, LeakyReLU
+from keras.layers import Dense, Conv2DTranspose, Reshape, Conv2D, BatchNormalization, Activation
+import keras.backend as K
+
+def squared_relu(x):
+    return K.relu(x) ** 2
 
 def build_grayscale():
     '''
@@ -9,18 +13,38 @@ def build_grayscale():
     model = Sequential()
 
     # Latent space of 100
-    model.add(Dense(100, activation='relu', input_shape=(100,)))
-    model.add(Dense(256, activation='relu'))
-    model.add(Dense(512, activation='relu'))
-    model.add(Dense(1024, activation='relu'))
-    model.add(Reshape((32, 32, 1)))
+    model.add(Dense(512, input_shape=(100,)))
+    model.add(BatchNormalization(momentum=0.9))
+    model.add(Activation(squared_relu))
+    
+    model.add(Dense(1024))
+    model.add(BatchNormalization(momentum=0.9))
+    model.add(Activation(squared_relu))
 
-    model.add(Conv2DTranspose(filters=32, kernel_size=(3, 3), strides=(2, 2), padding='same', activation='relu'))
+    model.add(Dense(2048))
+    model.add(BatchNormalization(momentum=0.9))
+    model.add(Activation(squared_relu))
+    
+    model.add(Reshape((16, 16, 8)))
+
+    model.add(Conv2DTranspose(filters=128, kernel_size=(3, 3), strides=(2, 2), padding='same'))
+    model.add(BatchNormalization(momentum=0.8))
+    model.add(Activation(squared_relu))
+
+    model.add(Conv2DTranspose(filters=64, kernel_size=(3, 3), strides=(2, 2), padding='same'))
+    model.add(BatchNormalization(momentum=0.8))
+    model.add(Activation(squared_relu))
+
+    model.add(Conv2DTranspose(filters=1, kernel_size=(3, 3), strides=(1, 1), padding='same'))
+    model.add(BatchNormalization(momentum=0.8))
+    model.add(Activation(squared_relu))
+
+    # model.add(Conv2DTranspose(filters=32, kernel_size=(3, 3), strides=(2, 2), padding='same', activation='relu'))
     # model.add(LeakyReLU(0.2))
     # model.add(Conv2DTranspose(filters=16, kernel_size=(3, 3), strides=(1, 1), padding='same'))
     # model.add(LeakyReLU(0.2))
 
-    model.add(Conv2D(filters=1, kernel_size=(3, 3), padding='same'))
+    # model.add(Conv2D(filters=1, kernel_size=(3, 3), padding='same'))
 
     # Output shape of (64, 64, 1)
     return model

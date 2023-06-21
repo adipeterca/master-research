@@ -13,9 +13,13 @@ def load_dataset(shuffle=True):
     for i, file in enumerate(os.listdir('dataset/hunt_and_kill')):
         img = cv2.imread(f'dataset/hunt_and_kill/{file}', cv2.IMREAD_GRAYSCALE)
         x[i] = img
+        if i % 1000 == 0 and i != 0:
+            print(f'Loaded {i} images')
     for i, file in enumerate(os.listdir('dataset/no_maze')):
         img = cv2.imread(f'dataset/no_maze/{file}', cv2.IMREAD_GRAYSCALE)
         x[10000+i] = img
+        if i % 1000 == 0 and i != 0:
+            print(f'Loaded {i} images')
 
     x = np.expand_dims(x, axis=-1)
 
