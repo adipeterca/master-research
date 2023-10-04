@@ -1,0 +1,16 @@
+VERSION STYLE:
+    v2.0.1
+     | | |____ Build version. Details what version of the architecture was used.
+     | |
+     | |______ Minor version. Describes what architecture (types of layers) is used.
+     |
+     |________ Major version. Should not change.
+    
+
+VERSION STYLE FOR GENERATORS/DISCRIMINATORS:
+    v2.X.Y
+     | | |____ Hotfix version. Starts at 0 and increments as the model sufferes changes (the model MUST BE working)
+     | |
+     | |______ Minor version. Starts at 1 and increments with each working model.
+     |
+     |________ Major version. In accordance with the application, must not be changed.
