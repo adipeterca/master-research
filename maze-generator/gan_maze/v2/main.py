@@ -1,10 +1,4 @@
 import os
-# Tensorflow debug level. Higher is more strict. (0, 1, 2 or 3)
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-
-import tensorflow as tf
-tf.get_logger().setLevel('FATAL')
-tf.autograph.set_verbosity(tf._logging.FATAL)
 
 from keras.models import load_model
 
@@ -138,4 +132,16 @@ if __name__ == '__main__':
         'v2.3.8'
     ]
 
-    gans_testing(available_generators, available_discriminators)
+    # gans_testing(available_generators, available_discriminators)
+
+    from amazed.modules.build import hunt_and_kill
+    from amazed.modules.solver import DFS
+
+    m = Maze(50, 50)
+    hunt_and_kill(m)
+
+    d = DFS(m)
+    d.solve()
+    d.gif("tmp/maze.gif")
+    d.image("tmp/maze.png")
+

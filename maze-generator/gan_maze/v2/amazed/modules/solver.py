@@ -1,4 +1,4 @@
-from maze import Maze
+from amazed.modules.maze import Maze
 
 class MazeSolver:
     '''
@@ -30,16 +30,82 @@ class MazeSolver:
         '''
         Creates a GIF at path @path by solving the maze.
         '''
+        
+        if len(self.steps) == 0:
+            self.solve()
+
+        frames = []
+        for step in self.steps:
+            frames.append(self.maze.export(current_cell=step, show=False))
+
+        frames[0].save(path, format="GIF", append_images=frames, save_all=True, duration=100, loop=0)
+
+    def image(self, path):
+        '''
+        Creates a static image at path @path representing the calculated solution.
+        '''
+
+        if len(self.steps) == 0:
+            self.solve()
+
+        # image = self.maze.export(current_cell=self.steps, show=False)
+        image = self.maze.export(current_cell=self.steps, show=False)
+        image.save(path)
+
+
+
 
 class DFS(MazeSolver):
     def solve(self):
         '''
         Uses the Depth-First search approach to find the shortes path from start to finish.
+        It uses a deterministic approach to search for the next path (clock-wise).
         '''
 
+        self.cells = [self.start]
+        self.visited = [self.start]
+
+        while self.cells[-1] != self.end:       
+            if len(self.cells) == 0:
+                raise ValueError(f"Could not find a connected path from {self.start} to {self.finish}!")
+
+            (x, y) = self.cells[-1]
+
+            # North
+            if self.maze.is_valid_position(x-1, y) and not self.maze.is_wall(x, y, x-1, y) and not (x-1, y) in self.visited:
+                self.cells.append((x-1, y))
+                self.visited.append((x-1, y))
+                continue
+            
+            # East
+            if self.maze.is_valid_position(x, y+1) and not self.maze.is_wall(x, y, x, y+1) and not (x, y+1) in self.visited:
+                self.cells.append((x, y+1))
+                self.visited.append((x, y+1))
+                continue
+
+            # South
+            if self.maze.is_valid_position(x+1, y) and not self.maze.is_wall(x, y, x+1, y) and not (x+1, y) in self.visited:
+                self.cells.append((x+1, y))
+                self.visited.append((x+1, y))
+                continue
+            
+            # West
+            if self.maze.is_valid_position(x, y-1) and not self.maze.is_wall(x, y, x, y-1) and not (x, y-1) in self.visited:
+                self.cells.append((x, y-1))
+                self.visited.append((x, y-1))
+                continue
+
+            self.cells.pop()
+            
+        # Deep copy the list
+        for cell in self.cells:
+            self.steps.append(cell)
+            # self.maze.export(output=f"tmp/step_{i}.png", current_cell=cell, show=False)
+
+    
 class Lee(MazeSolver):
     '''
-    DEPRECATED, NOT NEEDED!
+    Used to find the shortest possible path from start to finish.
     '''
     
     def solve(self):
