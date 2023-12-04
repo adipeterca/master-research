@@ -116,6 +116,7 @@ if __name__ == '__main__':
     from amazed.modules.build import random_carving
     from amazed.modules.solver import DFSRandom
     from amazed.modules.solver import DFS
+    from amazed.modules.solver import AStar
     from amazed.modules.solver import Lee
     import time
 
@@ -129,18 +130,37 @@ if __name__ == '__main__':
 
     # m.export(output="./tmp/maze.png", show=False)
     
-    m = Maze(15, 15)
-    random_carving(m, original_chance=1)
+    m = Maze(64, 64)
+    hunt_and_kill(m)
+    random_carving(m, 0.001)
+    # binary_tree(m)
     m.export(output="./tmp/maze.png", show=False)
-    a = Lee(m)
-    print("solving...")
+
+    a = AStar(m)
     start = time.time_ns()
     a.solve()
-    total = (time.time_ns() - start) / 1_000_000
+    a.image("tmp/astar.png")
+    total = (time.time_ns() - start)
+    print(f"Miliseconds to solve: {total} s")
 
-    print(f"Miliseconds to solve: {total} ms")
+    a = DFS(m)
+    start = time.time_ns()
+    a.solve()
+    a.image("tmp/dfs.png")
+    total = (time.time_ns() - start)
+    print(f"Miliseconds to solve: {total} s")
 
-    a.image("tmp/lee.png")
+    a = DFSRandom(m)
+    start = time.time_ns()
+    a.solve()
+    a.image("tmp/dfsrandom.png")
+    total = (time.time_ns() - start)
+    print(f"Miliseconds to solve: {total} s")
+
+
+
+
+    
     exit()
     # a.gif("tmp/lee.gif")
 

@@ -213,7 +213,6 @@ class Lee(MazeSolver):
 
         # Mark all cells as unvisited with -1.
         self.array = np.full((self.maze.rows, self.maze.columns), -1)
-        # self.lee(queue)
 
         while len(queue) != 0:
 
@@ -262,6 +261,102 @@ class Lee(MazeSolver):
 
     def score(self):
         return self.array[self.end[0]][self.end[1]]
+
+
+class AStar(MazeSolver):
+
+    def solve(self, h = None):
+        '''
+        A* algorithm implementation using a BFS jumping method (the agent "jumps" from one known cell to another).
+        G cost = distance from the starting node
+        H cost (heuristic) = distance to the end node
+        F cost = G+H
+        selected new cell = min(F), if there are multiple of the same value, min(H)
+        '''
+        def _h(start, end):
+            (x, y) = start
+            (endx, endy) = end
+            return ((x-endx)**2 + (y-endy)**2) ** (0.5)
+        
+        h = h or _h
+
+        bfs = [
+            {
+                "node" : self.start,
+                "gvalue": 0,
+                "fvalue": h(self.start, self.end) + 0,
+                "parent_index": -1,
+                "closed": False
+            }
+        ]
+        visited = []
+
+        while True:
+            # Select the node with the minimum F value
+            curr_node = bfs[0]
+            for node_element in bfs:
+                if node_element["closed"]:
+                    continue
+                fvalue = node_element["fvalue"]
+
+                if fvalue > curr_node["fvalue"]:
+                    curr_node = node_element
+            
+            # I did this with "closed" in the dict
+            # bfs.pop(bfs.index(curr_node))
+            curr_node["closed"] = True
+
+            visited.append(curr_node["node"])
+
+            if node_element["node"] == self.end:
+                print("Found the end using A*")
+                break
+            
+            # Check each neighbour and add it to the queue
+            (x, y) = curr_node["node"]
+            _list = self.maze.possible_actions(x, y)
+
+            for move in _list:
+                newx = x
+                newy = y
+                if move == Maze.NORTH: newx = x-1
+                elif move == Maze.EAST: newy = y+1
+                elif move == Maze.SOUTH: newx = x+1
+                elif move == Maze.WEST: newy = y-1
+                else:
+                    raise ValueError(f"Unknown move type <{move}>")
+                
+                if (newx, newy) in visited:
+                    continue
+
+                found = False
+                for node_element in bfs:
+                    # It already exists
+                    if node_element["node"] == (newx, newy):
+                        if node_element["gvalue"] > curr_node["gvalue"] + 1:
+                            node_element["gvalue"] = curr_node["gvalue"] + 1
+                            node_element["fvalue"] = curr_node["gvalue"] + 1 + h(node_element["node"], self.end)
+
+                            node_element["parent_index"] = bfs.index(curr_node)
+
+                        found = True
+
+                if not found:
+                    bfs.append(
+                        {
+                            "node": (newx, newy),
+                            "gvalue": curr_node["gvalue"] + 1,
+                            "fvalue": curr_node["gvalue"] + 1 + h((newx, newy), self.end),
+                            "parent_index": bfs.index(curr_node),
+                            "closed":False
+                        }
+                    )
+        
+        node = bfs[-1]
+        while node["parent_index"] != -1:
+            self.steps.append(node["node"])
+            node = bfs[node["parent_index"]]
+        self.steps.append(self.start)        
 
 
 class ReinforcementLearningSolver(MazeSolver):
