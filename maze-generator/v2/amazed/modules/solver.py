@@ -276,7 +276,9 @@ class AStar(MazeSolver):
         def _h(start, end):
             (x, y) = start
             (endx, endy) = end
-            return ((x-endx)**2 + (y-endy)**2) ** (0.5)
+            # return ((x-endx)**2 + (y-endy)**2) ** (0.5)
+            # return ((x-endx)**2 + (y-endy)**2)
+            return (endx-x) + (endy-y)
         
         h = h or _h
 
@@ -291,17 +293,31 @@ class AStar(MazeSolver):
         ]
         visited = []
 
+        iter = 0
         while True:
+            iter += 1
             # Select the node with the minimum F value
-            curr_node = bfs[0]
+            curr_node = None
             for node_element in bfs:
                 if node_element["closed"]:
                     continue
+                if curr_node is None:
+                    curr_node = node_element
+                    continue
                 fvalue = node_element["fvalue"]
+                gvalue = node_element["gvalue"]
 
-                if fvalue > curr_node["fvalue"]:
+                if fvalue < curr_node["fvalue"]:
+                    curr_node = node_element
+                elif fvalue == curr_node["fvalue"] and gvalue < curr_node["gvalue"]:
                     curr_node = node_element
             
+            if curr_node is None:
+                print("current node is None!")
+                print(*bfs, sep='\n')
+                break
+            
+            # print(f"[{iter:>4}] The current node is {curr_node}")
             # I did this with "closed" in the dict
             # bfs.pop(bfs.index(curr_node))
             curr_node["closed"] = True
@@ -326,18 +342,24 @@ class AStar(MazeSolver):
                 else:
                     raise ValueError(f"Unknown move type <{move}>")
                 
-                if (newx, newy) in visited:
-                    continue
+                # if (newx, newy) in visited:
+                #     _gvalue = curr_node["gvalue"] + 1
+                #     _fvalue = _gvalue + h((newx, newy), self.end)
+                #     if _fvalue
+                #     continue
 
                 found = False
                 for node_element in bfs:
                     # It already exists
                     if node_element["node"] == (newx, newy):
-                        if node_element["gvalue"] > curr_node["gvalue"] + 1:
+                        new_fvalue = curr_node["gvalue"] + 1 + h((newx, newy), self.end)
+                        if node_element["fvalue"] > new_fvalue:
                             node_element["gvalue"] = curr_node["gvalue"] + 1
-                            node_element["fvalue"] = curr_node["gvalue"] + 1 + h(node_element["node"], self.end)
+                            node_element["fvalue"] = new_fvalue
 
                             node_element["parent_index"] = bfs.index(curr_node)
+                        # else:
+                            # print(f"[{iter:>4}] Node [{newx}, {newy}] has current fvalue of {node_element['fvalue']} vs new fvalue of {new_fvalue}")
 
                         found = True
 
@@ -351,12 +373,13 @@ class AStar(MazeSolver):
                             "closed":False
                         }
                     )
+                # print(f"[{iter:>4}] BFS: ", *bfs, sep='\n')
         
         node = bfs[-1]
         while node["parent_index"] != -1:
             self.steps.append(node["node"])
             node = bfs[node["parent_index"]]
-        self.steps.append(self.start)        
+        self.steps.append(self.start)          
 
 
 class ReinforcementLearningSolver(MazeSolver):
