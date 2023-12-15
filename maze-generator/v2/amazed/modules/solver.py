@@ -271,14 +271,15 @@ class AStar(MazeSolver):
         G cost = distance from the starting node
         H cost (heuristic) = distance to the end node
         F cost = G+H
-        selected new cell = min(F), if there are multiple of the same value, min(H)
+        selected new cell = min(F), if there are multiple of the same value, min(H) \n
+
+        @h  : what heuristic function to use. Defaults to classical Euclidian distance.
         '''
         def _h(start, end):
             (x, y) = start
             (endx, endy) = end
-            # return ((x-endx)**2 + (y-endy)**2) ** (0.5)
-            # return ((x-endx)**2 + (y-endy)**2)
-            return (endx-x) + (endy-y)
+
+            return ((x-endx)**2 + (y-endy)**2) ** (0.5)
         
         h = h or _h
 
@@ -314,18 +315,22 @@ class AStar(MazeSolver):
             
             if curr_node is None:
                 print("current node is None!")
+                print(f"END NODE: {self.end}")
                 print(*bfs, sep='\n')
-                break
+
+                cc = {}
+                for node in bfs:
+                    (x, y) = node["node"]
+                    cc[f"{x}, {y}"] = (node["gvalue"]*1.5+100, 0, 0) 
+
+                self.maze.export(output="tmp/astar_error.png", cell_colors=cc)
+                raise ValueError("[AStar] Current node is None!")
             
-            # print(f"[{iter:>4}] The current node is {curr_node}")
-            # I did this with "closed" in the dict
-            # bfs.pop(bfs.index(curr_node))
             curr_node["closed"] = True
 
             visited.append(curr_node["node"])
 
-            if node_element["node"] == self.end:
-                print("Found the end using A*")
+            if curr_node["node"] == self.end:
                 break
             
             # Check each neighbour and add it to the queue
@@ -341,12 +346,7 @@ class AStar(MazeSolver):
                 elif move == Maze.WEST: newy = y-1
                 else:
                     raise ValueError(f"Unknown move type <{move}>")
-                
-                # if (newx, newy) in visited:
-                #     _gvalue = curr_node["gvalue"] + 1
-                #     _fvalue = _gvalue + h((newx, newy), self.end)
-                #     if _fvalue
-                #     continue
+
 
                 found = False
                 for node_element in bfs:
@@ -358,8 +358,6 @@ class AStar(MazeSolver):
                             node_element["fvalue"] = new_fvalue
 
                             node_element["parent_index"] = bfs.index(curr_node)
-                        # else:
-                            # print(f"[{iter:>4}] Node [{newx}, {newy}] has current fvalue of {node_element['fvalue']} vs new fvalue of {new_fvalue}")
 
                         found = True
 
@@ -373,7 +371,6 @@ class AStar(MazeSolver):
                             "closed":False
                         }
                     )
-                # print(f"[{iter:>4}] BFS: ", *bfs, sep='\n')
         
         node = bfs[-1]
         while node["parent_index"] != -1:

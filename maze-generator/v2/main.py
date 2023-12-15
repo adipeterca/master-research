@@ -1,12 +1,8 @@
-import os
-
 from keras.models import load_model
 
 import gans as GAN
 import generators as G
 import discriminators as D
-
-from amazed.modules.maze import Maze
 
 import utils
 
@@ -108,73 +104,3 @@ if __name__ == '__main__':
     ]
 
     # gans_testing(available_generators, available_discriminators)
-
-    
-    from amazed.modules.build import hunt_and_kill
-    from amazed.modules.build import binary_tree
-    from amazed.modules.build import random_kruskal
-    from amazed.modules.build import random_carving
-    from amazed.modules.solver import DFSRandom
-    from amazed.modules.solver import DFS
-    from amazed.modules.solver import AStar
-    from amazed.modules.solver import Lee
-    import time
-
-    # m = Maze(50, 50)
-    # random_carving(m, original_chance=0.95, multicell=False, adaptive=False)
-    # random_carving(m, original_chance=0.65, multicell=False, adaptive=False)
-    # random_carving(m, original_chance=0.35, multicell=False, adaptive=False)
-    # hunt_and_kill(m)
-    # # random_kruskal(m)
-    # # binary_tree(m)
-
-    # m.export(output="./tmp/maze.png", show=False)
-    
-    m = Maze(64, 64)
-    hunt_and_kill(m)
-    random_carving(m, 0.001)
-    # binary_tree(m)
-    m.export(output="./tmp/maze.png", show=False)
-
-    a = AStar(m)
-    start = time.time_ns()
-    a.solve()
-    a.image("tmp/astar.png")
-    total = (time.time_ns() - start)
-    print(f"Miliseconds to solve: {total} s")
-
-    a = DFS(m)
-    start = time.time_ns()
-    a.solve()
-    a.image("tmp/dfs.png")
-    total = (time.time_ns() - start)
-    print(f"Miliseconds to solve: {total} s")
-
-    a = DFSRandom(m)
-    start = time.time_ns()
-    a.solve()
-    a.image("tmp/dfsrandom.png")
-    total = (time.time_ns() - start)
-    print(f"Miliseconds to solve: {total} s")
-
-
-
-
-    
-    exit()
-    # a.gif("tmp/lee.gif")
-
-    # a = DFSRandom(m)
-    a = DFS(m)
-    a.solve()
-    a.image("tmp/dfs_random_1.png")
-    # a.gif("tmp/dfs_random_1.gif")
-    # print("Done with DFS random")
-    # a = DFSRandom(m)
-    # a.solve()
-    # a.image("tmp/dfs_random_2.png")
-    # print("Done with DFS random")
-    # a = DFSRandom(m)
-    # a.solve()
-    # a.image("tmp/dfs_random_3.png")
-    # print("Done with DFS random")
