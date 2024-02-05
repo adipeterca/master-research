@@ -237,7 +237,8 @@ class Lee(MazeSolver):
             if self.maze.is_valid_position(x, y-1) and not self.maze.is_wall(x, y, x, y-1) and self.array[x][y-1] == -1:
                 queue.append((x, y-1, current_value+1))
 
-
+        if self.array[self.maze.rows-1][self.maze.columns-1] == -1:
+            raise RuntimeError("Could not find a path from start to finish!")
 
         # Start from the end point and go to a position that is always LOWER
         self.steps.append(self.end)
@@ -259,6 +260,17 @@ class Lee(MazeSolver):
                 continue
 
         self.steps.reverse()
+
+    def is_connected(self):
+        '''
+        A maze is connected if all cells are accessible.
+        '''
+
+        for i in range(self.rows):
+            for j in range(self.columns):
+                if self.array[i][j] == -1:
+                    return False
+        return True
 
     def score(self):
         return self.array[self.end[0]][self.end[1]]

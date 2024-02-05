@@ -21,6 +21,7 @@ class Maze:
     CHECKERS_1 = (220, 220, 220)
     CHECKERS_2 = (240, 240, 240)
     CURRENT_CELL_COLOR = (219, 85, 7)
+    VISITED_CELL_COLOR = (200, 250, 200)
 
     class Cell:
         def __init__(self):
