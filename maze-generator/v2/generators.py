@@ -326,11 +326,15 @@ if __name__ == '__main__':
         console.info(f'Value {i :>2} stats: {occ:>5}\t{occ / 4096 * 100:>5.2f} %')        
 
     maze = Maze.build_from_array(output, 64, 64)
-    maze.export(output="./tmp/maze.png", show=False)
+    maze.export(output="./tmp/gan_maze.png", show=False)
     print(f"Cell to walls ratio: {maze.no_cells} / {maze.no_walls}")
 
     maze.toggle()
-    maze.export(output="tmp/maze2.png", show=False)
+
+    from amazed.modules.build import RandomCarving
+    RandomCarving(maze, gif=False, original_chance=0.003)
+    maze.toggle()
+    maze.export(output="tmp/gan_maze2.png", show=False)
     print(f"Cell to walls ratio: {maze.no_cells} / {maze.no_walls}")
 
     # from amazed.modules.solver import Lee

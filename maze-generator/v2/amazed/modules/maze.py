@@ -2,17 +2,34 @@ import numpy as np
 from PIL import Image
 from amazed.modules.data_types import cells
 
+class Vector2D():
+    def __init__(self, x_or_pair, y=None):
+        if y is None:
+            if isinstance(x_or_pair, tuple) and len(x_or_pair) == 2:
+                self.x, self.y = x_or_pair
+            else:
+                raise ValueError("Expected a tuple with 2 values.")
+        else:
+            self.x = x_or_pair
+            self.y = y
 
+    def __add__(self, other):
+        new_x = self.x + other.x
+        new_y = self.y + other.y
+        return Vector2D(new_x, new_y)
+    
+    def __str__(self):
+        return f"({self.x}, {self.y})"
 class Maze:
     # Old values. IF SOMETHING DOESN'T WORK THAT IS NOT RELATED TO REINFORCEMENT LEARNING, IS BECAUSE OF THIS
     # NORTH = 1
     # EAST = 2
     # SOUTH = 3
     # WEST = 4
-    NORTH = 0
-    EAST = 1
-    SOUTH = 2
-    WEST = 3
+    NORTH = Vector2D(-1, 0)
+    EAST = Vector2D(0, 1)
+    SOUTH = Vector2D(1, 0)
+    WEST = Vector2D(0, -1)
 
     START_COLOR = (0, 255, 0)
     END_COLOR = (0, 255, 255)
@@ -34,7 +51,7 @@ class Maze:
         def __str__(self):
             return 'Cell '
 
-    def __init__(self, rows=4, columns=4):
+    def __init__(self, rows=4, columns=4, constructor=Cell):
         '''
         Constructs a maze according to the number of rows/columns provided.
         '''
@@ -42,7 +59,7 @@ class Maze:
         for i in range(rows):
             _ = []
             for j in range(columns):
-                _.append(Maze.Cell())
+                _.append(constructor())
             self.data.append(_)
         
         self.rows = rows
@@ -153,6 +170,28 @@ class Maze:
         
         return self.data[x1][y1].walls[dir]
     
+    def is_valid_move(self, x, y, dir):
+        if not self.is_valid_position(x, y):
+            print(f"Not a valid start position: {x}, {y}")
+            return False
+        
+        x2 = x
+        y2 = y
+        if dir == self.NORTH: x2 = x - 1
+        elif dir == self.EAST: y2 = y + 1
+        elif dir == self.SOUTH: x2 = x + 1
+        else: y2 = y - 1
+
+        if not self.is_valid_position(x2, y2):
+            print(f"Not a valid end position: {x2}, {y2}")
+            return False
+        
+        if self.is_wall(x, y, x2, y2):
+            print(f"There is a wall between {x}, {y} and {x2}, {y2}")
+            return False
+        
+        return True    
+
     def toggle(self):
         '''
         Toggles all walls for the current Maze object. \n
@@ -184,14 +223,14 @@ class Maze:
                     By default, all cells are colored with DEFAULT_COLOR, except for the start (START_COLOR) and end (END_COLOR).
         @checkers: default background color will change to a checkers pattern.
         """
-        new_data = np.zeros((self.rows * distance, self.columns * distance, 3), dtype=np.uint8)
+        new_data = np.zeros((self.rows * distance, self.columns * distance, 4), dtype=np.uint8)
 
         # Setting default values
         if cell_colors is None:
             cell_colors = {}
 
-        cell_colors["0, 0"] = self.START_COLOR
-        cell_colors[f"{self.rows-1}, {self.columns-1}"] = self.END_COLOR
+        # cell_colors["0, 0"] = self.START_COLOR
+        # cell_colors[f"{self.rows-1}, {self.columns-1}"] = self.END_COLOR
 
 
         for i in range(self.rows):

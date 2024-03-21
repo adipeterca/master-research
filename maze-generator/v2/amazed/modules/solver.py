@@ -6,6 +6,31 @@ from PIL import ImageDraw
 
 from keras.models import Sequential
 
+def standard_euclidian(start, end):
+    (x, y) = start
+    (endx, endy) = end
+    return ((x-endx)**2 + (y-endy)**2) ** 0.5 
+
+def modified_euclidian(start, end):
+    (x, y) = start
+    (endx, endy) = end
+    return ((x-endx)**2 + (y-endy)**2)
+
+def standard_manhattan(start, end):
+    (x, y) = start
+    (endx, endy) = end
+    return abs(x-endx) + abs(y-endy)
+
+def standard_minkowski(start, end, p=3):
+    '''
+    With p = 1, it's the same as Manhattan distance.\n
+    With p = 2, it's the same as Euclidian distance.\n
+    With p = inf, it's the same as Chebyshev distance.\n
+    '''
+    (x, y) = start
+    (endx, endy) = end
+    return (abs(x-endx)**p + abs(y-endy)**p) ** (1/p)
+
 class MazeSolver:
     '''
     Class-template depicting a maze-solving algorithm.
@@ -44,9 +69,10 @@ class MazeSolver:
 
         frames = []
         proc = 10
+        cell_colors = dict()
         for i, step in enumerate(self.steps):
             if i >= len(self.steps) * (proc / 100):
-                print(f"Progress: {proc}%")
+                print(f"[GIF][Solver]Progress: {proc}%")
                 proc += 10
 
 
@@ -54,12 +80,11 @@ class MazeSolver:
             if step == self.start or step == self.end:
                 continue
 
-            cell_colors = {
-                f"{step[0]}, {step[1]}" : self.maze.CURRENT_CELL_COLOR
-            }
+            cell_colors[f"{step[0]}, {step[1]}"] = self.maze.CURRENT_CELL_COLOR
             frames.append(self.maze.export(show=False, cell_colors=cell_colors))
+            cell_colors[f"{step[0]}, {step[1]}"] = self.maze.VISITED_CELL_COLOR
 
-        frames[0].save(path, format="GIF", append_images=frames, save_all=True, duration=100, loop=0)
+        frames[0].save(path, format="GIF", append_images=frames, save_all=True, duration=50)
         print(f"GIF created at {path}")
 
     def image(self, path):
@@ -389,7 +414,8 @@ class AStar(MazeSolver):
         while node["parent_index"] != -1:
             self.steps.append(node["node"])
             node = bfs[node["parent_index"]]
-        self.steps.append(self.start)          
+        self.steps.append(self.start) 
+        self.steps.reverse()         
 
 
 class ReinforcementLearningSolver(MazeSolver):
