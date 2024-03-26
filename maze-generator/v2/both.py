@@ -4,12 +4,17 @@ from player import Player
 
 import random
 import pygame
+import pygame.freetype
 
 class Button():
-    def __init__(self, body : pygame.Rect):
+    def __init__(self, body: pygame.Rect, text: str, color: tuple = (180, 180, 180), text_color: tuple = (25, 25, 25)):
         self.body = body
+        self.colorEnabled = color
+        self.colorDisabled = ((color[0] - 40) % 255, (color[1] - 40) % 255, (color[2] - 40) % 255)
+        self.text = text
+        self.text_color = text_color
         self.enabled = True
-    
+
     def inside(self, pos):
         (x, y) = pos
         return self.body.left < x and x < self.body.right and self.body.top < y and y < self.body.bottom
@@ -24,7 +29,7 @@ class GameMaster():
     PLAYER_B = (198, 29, 235)
     VIEW_B = (140, 30, 93)
     FINISH_B = (255, 91, 185)
-    
+
     UNKNOWN = (50, 50, 50)
     VIEW_ALL = (200, 200, 200)
     VIEW_HIDDEN = (15, 15, 15)
@@ -38,6 +43,7 @@ class GameMaster():
     WIN_A = 5
     WIN_B = 6
     DRAW = 7
+    UPDATE_POSITION = 8
 
     class GameCell(Maze.Cell):
         def __init__(self):
@@ -48,7 +54,7 @@ class GameMaster():
 
 
     def __init__(self):
-        
+
         self.maze = Maze(10, 10, self.GameCell)
         playerA_count = 0
         playerB_count = 0
@@ -86,7 +92,7 @@ class GameMaster():
                         self.cell_colors_b[f"{i}, {j}"] = self.UNKNOWN
                 if self.maze.data[i][j].visibleA and self.maze.data[i][j].visibleB:
                     print(f"Marked cell {i}, {j} as visible to both.")
-    
+
     def view_a(self):
         self.maze.export(output="tmp/playerA.png", show=False, cell_colors=self.cell_colors_a)
 
@@ -101,18 +107,21 @@ class GameMaster():
 
         all_cell_colors["0, 0"] = self.PLAYER_A
         all_cell_colors["9, 9"] = self.PLAYER_B
-        
+
         self.maze.export(output="tmp/all.png", show=False, cell_colors=all_cell_colors)
 
-    def run(self, human_interaction: bool = True):
+    def run(self, human_interaction: bool = True, delay=50):
         pygame.init()
+
+        self.FONT = pygame.freetype.SysFont("bahnschrift", 20)
 
         SCREEN_WIDTH = 800
         SCREEN_HEIGHT = 600
         wall_gap = 5
 
         screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-        
+        pygame.display.set_caption("B O T H")
+
         # Board settings
         board_bk = pygame.Rect((150, 50, 500+wall_gap, 500+wall_gap))
         cell_width = (board_bk.width - (self.maze.rows + 1) * wall_gap) // self.maze.rows
@@ -122,14 +131,15 @@ class GameMaster():
         board_wall_horizontal = pygame.Rect((0, 0, cell_width, wall_gap))
 
         # Buttons
-        buttonA = Button(pygame.Rect((board_bk.right+20, board_bk.top+50, 100, 50)))
-        buttonB = Button(pygame.Rect((board_bk.left-20-buttonA.body.width, board_bk.top+50, 100, 50)))
+        buttonLoop = Button(pygame.Rect((board_bk.left-120, board_bk.top+50, 100, 50)), "LOOP START")
+        buttonLoop.enabled = False
+        buttonNextMove = Button(pygame.Rect((board_bk.left-120, board_bk.top+150, 100, 50)), "NEXT MOVE")
 
         # Players settings
         playerA = Player("PlayerA", body=pygame.Rect((0, 0, cell_width//2, cell_height//2)), maze=self.maze, start=(0, 0), finish=(9, 9))
         playerA.body.top = board_bk.top + playerA.pos.x*board_cell.height + (playerA.pos.x+1)*wall_gap + cell_height * 0.25
         playerA.body.left = board_bk.left + playerA.pos.y*board_cell.width + (playerA.pos.y+1)*wall_gap + cell_width * 0.25
-        
+
         playerB = Player("PlayerB", body=pygame.Rect((0, 0, cell_width//2, cell_height//2)), maze=self.maze, start=(9, 9), finish=(0, 0))
         playerB.body.top = board_bk.top + playerB.pos.x*board_cell.height + (playerB.pos.x+1)*wall_gap + cell_height * 0.25
         playerB.body.left = board_bk.left + playerB.pos.y*board_cell.width + (playerB.pos.y+1)*wall_gap + cell_width * 0.25
@@ -143,46 +153,11 @@ class GameMaster():
         finishB.left = board_bk.left + playerB.finish[1]*board_cell.width + (playerB.finish[1]+1)*wall_gap + cell_height * 0.4
 
         state = self.RUNNING
+        iteration = 0
         while state != self.QUIT:
-
-            # ------------------------------------------------------------------------------------
-            # Handle events
-
-            for event in pygame.event.get():
-
-                if state == self.RUNNING:
-                    if event.type == pygame.KEYDOWN and human_interaction:
-                        if event.key == pygame.K_UP and self.maze.is_valid_move(playerA.pos.x, playerA.pos.y, Maze.NORTH):
-                            playerA.move(Maze.NORTH)
-                        elif event.key == pygame.K_RIGHT and self.maze.is_valid_move(playerA.pos.x, playerA.pos.y, Maze.EAST):
-                            playerA.move(Maze.EAST)
-                        elif event.key == pygame.K_DOWN and self.maze.is_valid_move(playerA.pos.x, playerA.pos.y, Maze.SOUTH):
-                            playerA.move(Maze.SOUTH)
-                        elif event.key == pygame.K_LEFT and self.maze.is_valid_move(playerA.pos.x, playerA.pos.y, Maze.WEST):
-                            playerA.move(Maze.WEST)
-
-                        if event.key == pygame.K_w and self.maze.is_valid_move(playerB.pos.x, playerB.pos.y, Maze.NORTH):
-                            playerB.move(Maze.NORTH)
-                        elif event.key == pygame.K_d and self.maze.is_valid_move(playerB.pos.x, playerB.pos.y, Maze.EAST):
-                            playerB.move(Maze.EAST)
-                        elif event.key == pygame.K_s and self.maze.is_valid_move(playerB.pos.x, playerB.pos.y, Maze.SOUTH):
-                            playerB.move(Maze.SOUTH)
-                        elif event.key == pygame.K_a and self.maze.is_valid_move(playerB.pos.x, playerB.pos.y, Maze.WEST):
-                            playerB.move(Maze.WEST)
-
-                    if event.type == pygame.MOUSEBUTTONDOWN:
-                        if buttonA.inside(pygame.mouse.get_pos()):
-                            print("clicked inside button A")
-                        if buttonB.inside(pygame.mouse.get_pos()):
-                            print("clicked inside button B")
-
-
-                if event.type == pygame.QUIT:
-                    state = self.QUIT
-            
             # ------------------------------------------------------------------------------------
             # Draw the board
-            if state == self.RUNNING:
+            if True:
                 screen.fill((255, 255, 255))
                 screen.fill((0, 0, 0), board_bk)
 
@@ -215,31 +190,50 @@ class GameMaster():
                             board_wall_horizontal.top = board_cell.bottom
                             board_wall_horizontal.left = board_cell.left
                             pygame.draw.rect(screen, wall_color, board_wall_horizontal)
-                
-                
+
+
                 pygame.draw.rect(screen, self.FINISH_A, finishA)
                 pygame.draw.rect(screen, self.FINISH_B, finishB)
 
                 if playerA.moved:
                     playerA.body.top = board_bk.top + playerA.pos.x*board_cell.height + (playerA.pos.x+1)*wall_gap + cell_height * 0.25
                     playerA.body.left = board_bk.left + playerA.pos.y*board_cell.width + (playerA.pos.y+1)*wall_gap + cell_width * 0.25
+                    playerA.moved = False
                 pygame.draw.rect(screen, self.PLAYER_A, playerA.body)
 
                 if playerB.moved:
                     playerB.body.top = board_bk.top + playerB.pos.x*board_cell.height + (playerB.pos.x+1)*wall_gap + cell_height * 0.25
                     playerB.body.left = board_bk.left + playerB.pos.y*board_cell.width + (playerB.pos.y+1)*wall_gap + cell_width * 0.25
+                    playerB.moved = False
                 pygame.draw.rect(screen, self.PLAYER_B, playerB.body)
 
+                if buttonLoop.enabled:
+                    pygame.draw.rect(screen, buttonLoop.colorEnabled, buttonLoop.body)
+                    self.FONT.render_to(screen, (buttonLoop.body.x+20, buttonLoop.body.y+30), "STOP", buttonLoop.text_color)
+                else:
+                    pygame.draw.rect(screen, buttonLoop.colorDisabled, buttonLoop.body)
+                    self.FONT.render_to(screen, (buttonLoop.body.x+20, buttonLoop.body.y+30), "START", buttonLoop.text_color)
+                self.FONT.render_to(screen, (buttonLoop.body.x+25, buttonLoop.body.y+7), "LOOP", buttonLoop.text_color)
 
-                pygame.draw.rect(screen, self.PLAYER_A, buttonA.body)
-                pygame.draw.rect(screen, self.PLAYER_B, buttonB.body)
 
+                if buttonNextMove.enabled:
+                    pygame.draw.rect(screen, buttonNextMove.colorEnabled, buttonNextMove.body)
+                else:
+                    pygame.draw.rect(screen, buttonNextMove.colorDisabled, buttonNextMove.body)
+                self.FONT.render_to(screen, (buttonNextMove.body.x+23, buttonNextMove.body.y+7), "NEXT", buttonNextMove.text_color)
+                self.FONT.render_to(screen, (buttonNextMove.body.x+20, buttonNextMove.body.y+30), "MOVE", buttonNextMove.text_color)
 
+                self.FONT.render_to(screen, (SCREEN_WIDTH//2-200, 20), f"SCORE: {playerA.score}", self.PLAYER_A)
+                self.FONT.render_to(screen, (SCREEN_WIDTH//2-50, 20), f"ITERATION: {iteration}", (0, 0, 0))
+                self.FONT.render_to(screen, (SCREEN_WIDTH//2+130, 20), f"SCORE: {playerB.score}", self.PLAYER_B)
+
+                pygame.display.update()
+            
             # ------------------------------------------------------------------------------------
             # Handle game logic
-            
 
-            if state == self.RUNNING:
+            # Only update the position if it was actually modified
+            if state == self.UPDATE_POSITION:
                 if not human_interaction:
 
                     # Handle the negociation
@@ -249,7 +243,7 @@ class GameMaster():
 
                             print(f"[ Negociation ] A proposal is: OFFER {playerA.offer} and REQUEST {playerA.request}")
                             print(f"[ Negociation ] B proposal is: OFFER {playerB.offer} and REQUEST {playerB.request}")
-                            
+
                             if playerA.proposal(playerB.offer, playerB.request, i) and playerB.proposal(playerA.offer, playerA.request, i):
                                 print(f"[ Negociation ] Succes!")
 
@@ -259,16 +253,19 @@ class GameMaster():
                                 break
                             else:
                                 print(f"[ Negociation ] Failure!")
-                        
+
                     print("[ Negociation ] The negociation period ended.")
-                    
+
                     # Handle the movement
                     playerA.best_move()
                     playerB.best_move()
 
-                        
+
                 self.maze.data[playerA.pos.x][playerA.pos.y].visibleA = True
                 self.maze.data[playerB.pos.x][playerB.pos.y].visibleB = True
+
+                state = self.RUNNING
+                iteration += 1
 
                 if playerA.win() and playerB.win():
                     state = self.DRAW
@@ -280,23 +277,67 @@ class GameMaster():
                     state = self.WIN_B
                     print("[ Debug ] B won.")
 
+            # ------------------------------------------------------------------------------------
+            # Handle events
 
-            pygame.display.update()
-            if not human_interaction:
-                print("[ Human Interaction ] Waiting for a simple input to move on to the next move.")
-                next_episode = False
-                while not next_episode:
+            if state == self.RUNNING:
+                if human_interaction:
+                    print("[ Human Interaction ] Accepting user input.")
+                    for event in pygame.event.get():
+                        if event.type == pygame.KEYDOWN:
+                            if event.key == pygame.K_UP and self.maze.is_valid_move(playerA.pos.x, playerA.pos.y, Maze.NORTH):
+                                playerA.move(Maze.NORTH)
+                                state = self.UPDATE_POSITION
+                            elif event.key == pygame.K_RIGHT and self.maze.is_valid_move(playerA.pos.x, playerA.pos.y, Maze.EAST):
+                                playerA.move(Maze.EAST)
+                                state = self.UPDATE_POSITION
+                            elif event.key == pygame.K_DOWN and self.maze.is_valid_move(playerA.pos.x, playerA.pos.y, Maze.SOUTH):
+                                playerA.move(Maze.SOUTH)
+                                state = self.UPDATE_POSITION
+                            elif event.key == pygame.K_LEFT and self.maze.is_valid_move(playerA.pos.x, playerA.pos.y, Maze.WEST):
+                                playerA.move(Maze.WEST)
+                                state = self.UPDATE_POSITION
+
+                            if event.key == pygame.K_w and self.maze.is_valid_move(playerB.pos.x, playerB.pos.y, Maze.NORTH):
+                                playerB.move(Maze.NORTH)
+                                state = self.UPDATE_POSITION
+                            elif event.key == pygame.K_d and self.maze.is_valid_move(playerB.pos.x, playerB.pos.y, Maze.EAST):
+                                playerB.move(Maze.EAST)
+                                state = self.UPDATE_POSITION
+                            elif event.key == pygame.K_s and self.maze.is_valid_move(playerB.pos.x, playerB.pos.y, Maze.SOUTH):
+                                playerB.move(Maze.SOUTH)
+                                state = self.UPDATE_POSITION
+                            elif event.key == pygame.K_a and self.maze.is_valid_move(playerB.pos.x, playerB.pos.y, Maze.WEST):
+                                playerB.move(Maze.WEST)
+                                state = self.UPDATE_POSITION
+
+                        if event.type == pygame.QUIT:
+                            state = self.QUIT
+
+                else:
                     for event in pygame.event.get():
                         if event.type == pygame.QUIT:
                             state = self.QUIT
-                            next_episode = True
+                            break
 
                         if event.type == pygame.MOUSEBUTTONDOWN:
-                            if buttonA.inside(pygame.mouse.get_pos()):
-                                next_episode = True
-                            if buttonB.inside(pygame.mouse.get_pos()):
-                                next_episode = True
+                            pos = pygame.mouse.get_pos()
+                            if buttonLoop.inside(pos):
+                                buttonLoop.enabled = not buttonLoop.enabled
+                                buttonNextMove.enabled = not buttonLoop.enabled
 
+                                print(f"[ Debug ] Switched loop to {buttonLoop.enabled}")
+                            if buttonNextMove.inside(pos) and buttonNextMove.enabled:
+                                state = self.UPDATE_POSITION
+                        
+                    if buttonLoop.enabled and state != self.QUIT:
+                        pygame.time.delay(delay)
+                        state = self.UPDATE_POSITION
+
+            if state in (self.WIN_A, self.WIN_B, self.DRAW):
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        state = self.QUIT
         pygame.quit()
         print("[ Debug ] The application was closed by the user.")
 

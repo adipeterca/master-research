@@ -28,6 +28,7 @@ class Player():
             raise ValueError(f"Invalid direction provided {dir}")
         
         self.pos += dir
+        self.score += 1
         self.moved = True
 
     def win(self):

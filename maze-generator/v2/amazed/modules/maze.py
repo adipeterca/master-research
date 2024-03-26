@@ -119,7 +119,7 @@ class Maze:
         
         self.path(x1, y1, dir)
 
-    def possible_actions(self, x:int , y:int) -> list | None:
+    def possible_actions(self, x:int , y:int) -> list:
         '''
         An action represents a valid move from the given cell.\n
         A move is valid if there aren't any walls in that direction.\n
