@@ -22,6 +22,8 @@ class Player():
 
         self.score = 0
         self.moved = False
+
+        self.full_discovered = False
     
     def move(self, dir):
         if dir not in (Maze.NORTH, Maze.EAST, Maze.SOUTH, Maze.WEST):
@@ -34,12 +36,27 @@ class Player():
     def win(self):
         return self.pos.x == self.finish[0] and self.pos.y == self.finish[1]
     
-    def wants_negociation(self) -> bool:
+    def wants_negotiation(self) -> bool:
         '''
         Based on what this player knows, does it want to negociate?
         '''
 
+        if self.full_discovered:
+            print(f"[ {self.name} ] Does not want negociation because the full maze is known.")
+            return False
+
         # Make a strategy to decide
+        self.full_discovered = True
+        for i in range(self.maze.rows):
+            for j in range(self.maze.columns):
+                if self.name == "PlayerA" and not self.maze.data[i][j].visibleA or \
+                    self.name == "PlayerB" and not self.maze.data[i][j].visibleB:
+                    self.full_discovered = False
+                    break
+        
+        if self.full_discovered:
+            print(f"[ {self.name} ] Does not want negociation because the full maze is known.")
+            return False
 
         # If the answer is yes, proceed with offer & request.
 

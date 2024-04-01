@@ -237,12 +237,12 @@ class GameMaster():
                 if not human_interaction:
 
                     # Handle the negociation
-                    if playerA.wants_negociation() and playerB.wants_negociation():
+                    if playerA.wants_negotiation() and playerB.wants_negotiation():
                         for i in range(3):
                             print(f"[ Negociation ] Attempt number {i}:")
 
-                            print(f"[ Negociation ] A proposal is: OFFER {playerA.offer} and REQUEST {playerA.request}")
-                            print(f"[ Negociation ] B proposal is: OFFER {playerB.offer} and REQUEST {playerB.request}")
+                            print(f"[ Negociation ] A proposal is: \n\tOFFER {playerA.offer}\n\tREQUEST {playerA.request}")
+                            print(f"[ Negociation ] B proposal is: \n\tOFFER {playerB.offer}\n\tREQUEST {playerB.request}")
 
                             if playerA.proposal(playerB.offer, playerB.request, i) and playerB.proposal(playerA.offer, playerA.request, i):
                                 print(f"[ Negociation ] Succes!")
