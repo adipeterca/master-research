@@ -31,7 +31,7 @@
 
 ## Important remarks
 * If a player knows the full layout of a maze, it will **not** accept any new negotiation attempts.
-* The score of a player represents the **energy** it takes to make a move:
+* The score of a player represents the total **energy** used over the whole game:
 	* For a simple move to a known cell, it will take 1 unit of energy.
 	* Negotiation will take 2 units of energy per attempt (each session consists of 3 maximum attempts each).
 	* Moving into an unknown cell as a valid move will consume 1 unit of energy.
@@ -39,3 +39,4 @@
 * A player cannot offer an unknown cell, nor can it request an already known cell.
 * A player cannot accept an offered known cell.
 * A player cannot predict or know what strategy the other player is using.
+* A player will receive 6 units of energy at the start of each round. Unused energy will not carry over to the next round.

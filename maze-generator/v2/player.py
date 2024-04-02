@@ -24,6 +24,8 @@ class Player():
         self.moved = False
 
         self.full_discovered = False
+        self.energy_available = 0
+        self.energy_used = 0
     
     def move(self, dir):
         if dir not in (Maze.NORTH, Maze.EAST, Maze.SOUTH, Maze.WEST):
@@ -70,18 +72,11 @@ class Player():
         Examine the offer and the request and determine if you are willing to accept the proposal.
         '''
         return random.random() > 0.5
-        
-        # if attempt == 0:
-        #     return self.offer == request
-        # if attempt == 1:
-        #     return offer == self.request
-        # if attempt == 2:
-        #     return True
+
         
     def best_move(self):
         '''
-        Based on what the current situation is, determine what the best move is and perform it.
-        Only to be used when human interaction is not intended.
+        Based on what the current situation is, determine what the best move is and return it.
         '''
 
         # Move in a random direction with more ephasys on exploration (unknown cells).
@@ -101,6 +96,4 @@ class Player():
                     next_cells.append(dir)
                     next_cells.append(dir)
 
-        print(f"[ best move ] Player {self.name} moved from {self.pos} ", end="")
-        self.move(random.choice(next_cells))
-        print(f"to {self.pos}")
+        return random.choice(next_cells)
