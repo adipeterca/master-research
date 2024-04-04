@@ -24,15 +24,12 @@ class Player():
         self.moved = False
 
         self.full_discovered = False
-        self.energy_available = 0
-        self.energy_used = 0
     
     def move(self, dir):
         if dir not in (Maze.NORTH, Maze.EAST, Maze.SOUTH, Maze.WEST):
             raise ValueError(f"Invalid direction provided {dir}")
         
         self.pos += dir
-        self.score += 1
         self.moved = True
 
     def win(self):
@@ -76,7 +73,7 @@ class Player():
         
     def best_move(self):
         '''
-        Based on what the current situation is, determine what the best move is and return it.
+        Based on what the current situation is, determine what the best move is and perform it.
         '''
 
         # Move in a random direction with more ephasys on exploration (unknown cells).
@@ -96,4 +93,4 @@ class Player():
                     next_cells.append(dir)
                     next_cells.append(dir)
 
-        return random.choice(next_cells)
+        self.move(random.choice(next_cells))
