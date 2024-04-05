@@ -1,5 +1,6 @@
 from amazed.modules.maze import Maze
 from amazed.modules.build import DepthFirstSearch
+from amazed.modules.build import Sculptor
 from player import Player
 
 import random
@@ -58,9 +59,53 @@ class GameMaster():
             self.visibleB = False
 
 
-    def __init__(self):
+    def __init__(self, maze_algorithm_class: Sculptor = DepthFirstSearch, seed = 0):
+        self._maze_algorithm_class = maze_algorithm_class
+        self._seed = seed
 
+        self._create_maze()
+
+        # General settings
+        pygame.init()
+        self.screen = pygame.display.set_mode((self.SCREEN_WIDTH, self.SCREEN_HEIGHT))
+        pygame.display.set_caption("B O T H")
+
+        self.FONT = pygame.freetype.SysFont("bahnschrift", 20)
+        self.wall_gap = 5
+
+        # Board settings
+        self.board_bk = pygame.Rect((150, 50, 500+self.wall_gap, 500+self.wall_gap))
+        self.cell_width = (self.board_bk.width - (self.maze.rows + 1) * self.wall_gap) // self.maze.rows
+        self.cell_height = (self.board_bk.height - (self.maze.columns + 1) * self.wall_gap) // self.maze.columns
+        self.board_cell = pygame.Rect((0, 0, self.cell_width, self.cell_height))
+        self.board_wall_vertical = pygame.Rect((0, 0, self.wall_gap, self.cell_height))
+        self.board_wall_horizontal = pygame.Rect((0, 0, self.cell_width, self.wall_gap))
+
+        self.board_lower = pygame.Rect((0, self.SCREEN_HEIGHT-30, self.SCREEN_WIDTH, 30))
+
+        # Buttons
+        self.buttonLoop = Button(pygame.Rect((self.board_bk.left-120, self.board_bk.top+50, 100, 50)), "LOOP START")
+        self.buttonNextMove = Button(pygame.Rect((self.board_bk.left-120, self.board_bk.top+150, 100, 50)), "NEXT MOVE")
+
+        # Players settings
+        self.playerA = Player("PlayerA", body=pygame.Rect((0, 0, self.cell_width//2, self.cell_height//2)), maze=self.maze)
+        while self.playerA.start == self.playerA.finish:
+            self.playerA.finish = (random.randint(0, self.maze.rows-1), random.randint(0, self.maze.columns-1))
+        
+        self.playerB = Player("PlayerB", body=pygame.Rect((0, 0, self.cell_width//2, self.cell_height//2)), maze=self.maze)
+        while self.playerB.start == self.playerB.finish:
+            self.playerB.finish = (random.randint(0, self.maze.rows-1), random.randint(0, self.maze.columns-1))
+        
+        self.finishA = pygame.Rect((0, 0, self.cell_width // 4, self.cell_height // 4))
+        self.finishB = pygame.Rect((0, 0, self.cell_width // 4, self.cell_height // 4))
+
+        self.state = self.NONE
+
+    def _create_maze(self):
         self.maze = Maze(10, 10, self.GameCell)
+        self._maze_algorithm_class(self.maze, seed=self._seed, gif=False)
+        # DepthFirstSearch(self.maze, gif=False)
+
         playerA_count = 0
         playerB_count = 0
 
@@ -97,47 +142,6 @@ class GameMaster():
                         self.cell_colors_b[f"{i}, {j}"] = self.UNKNOWN
                 if self.maze.data[i][j].visibleA and self.maze.data[i][j].visibleB:
                     print(f"Marked cell {i}, {j} as visible to both.")
-
-        # General settings
-        pygame.init()
-        self.screen = pygame.display.set_mode((self.SCREEN_WIDTH, self.SCREEN_HEIGHT))
-        pygame.display.set_caption("B O T H")
-
-        self.FONT = pygame.freetype.SysFont("bahnschrift", 20)
-        self.wall_gap = 5
-
-        # Board settings
-        self.board_bk = pygame.Rect((150, 50, 500+self.wall_gap, 500+self.wall_gap))
-        self.cell_width = (self.board_bk.width - (self.maze.rows + 1) * self.wall_gap) // self.maze.rows
-        self.cell_height = (self.board_bk.height - (self.maze.columns + 1) * self.wall_gap) // self.maze.columns
-        self.board_cell = pygame.Rect((0, 0, self.cell_width, self.cell_height))
-        self.board_wall_vertical = pygame.Rect((0, 0, self.wall_gap, self.cell_height))
-        self.board_wall_horizontal = pygame.Rect((0, 0, self.cell_width, self.wall_gap))
-
-        self.board_lower = pygame.Rect((0, self.SCREEN_HEIGHT-25, self.SCREEN_WIDTH, 25))
-
-        # Buttons
-        self.buttonLoop = Button(pygame.Rect((self.board_bk.left-120, self.board_bk.top+50, 100, 50)), "LOOP START")
-        self.buttonNextMove = Button(pygame.Rect((self.board_bk.left-120, self.board_bk.top+150, 100, 50)), "NEXT MOVE")
-
-        # Players settings
-        self.playerA = Player("PlayerA", body=pygame.Rect((0, 0, self.cell_width//2, self.cell_height//2)), maze=self.maze, start=(0, 0), finish=(9, 9))
-        self.playerA.body.top = self.board_bk.top + self.playerA.pos.x*self.board_cell.height + (self.playerA.pos.x+1)*self.wall_gap + self.cell_height * 0.25
-        self.playerA.body.left = self.board_bk.left + self.playerA.pos.y*self.board_cell.width + (self.playerA.pos.y+1)*self.wall_gap + self.cell_width * 0.25
-
-        self.playerB = Player("PlayerB", body=pygame.Rect((0, 0, self.cell_width//2, self.cell_height//2)), maze=self.maze, start=(9, 9), finish=(0, 0))
-        self.playerB.body.top = self.board_bk.top + self.playerB.pos.x*self.board_cell.height + (self.playerB.pos.x+1)*self.wall_gap + self.cell_height * 0.25
-        self.playerB.body.left = self.board_bk.left + self.playerB.pos.y*self.board_cell.width + (self.playerB.pos.y+1)*self.wall_gap + self.cell_width * 0.25
-
-        self.finishA = pygame.Rect((0, 0, self.cell_width // 4, self.cell_height // 4))
-        self.finishA.top = self.board_bk.top + self.playerA.finish[0]*self.board_cell.height + (self.playerA.finish[0]+1)*self.wall_gap + self.cell_height * 0.4
-        self.finishA.left = self.board_bk.left + self.playerA.finish[1]*self.board_cell.width + (self.playerA.finish[1]+1)*self.wall_gap + self.cell_height * 0.4
-
-        self.finishB = pygame.Rect((0, 0, self.cell_width // 4, self.cell_height // 4))
-        self.finishB.top = self.board_bk.top + self.playerB.finish[0]*self.board_cell.height + (self.playerB.finish[0]+1)*self.wall_gap + self.cell_height * 0.4
-        self.finishB.left = self.board_bk.left + self.playerB.finish[1]*self.board_cell.width + (self.playerB.finish[1]+1)*self.wall_gap + self.cell_height * 0.4
-
-        self.state = self.NONE
 
 
     def view_a(self):
@@ -193,19 +197,20 @@ class GameMaster():
                     self.board_wall_horizontal.left = self.board_cell.left
                     pygame.draw.rect(self.screen, wall_color, self.board_wall_horizontal)
         
+        self.finishA.top = self.board_bk.top + self.playerA.finish[0]*self.board_cell.height + (self.playerA.finish[0]+1)*self.wall_gap + self.cell_height * 0.4
+        self.finishA.left = self.board_bk.left + self.playerA.finish[1]*self.board_cell.width + (self.playerA.finish[1]+1)*self.wall_gap + self.cell_height * 0.4
         pygame.draw.rect(self.screen, self.FINISH_A, self.finishA)
+
+        self.finishB.top = self.board_bk.top + self.playerB.finish[0]*self.board_cell.height + (self.playerB.finish[0]+1)*self.wall_gap + self.cell_height * 0.4
+        self.finishB.left = self.board_bk.left + self.playerB.finish[1]*self.board_cell.width + (self.playerB.finish[1]+1)*self.wall_gap + self.cell_height * 0.4
         pygame.draw.rect(self.screen, self.FINISH_B, self.finishB)
 
-        if self.playerA.moved:
-            self.playerA.body.top = self.board_bk.top + self.playerA.pos.x*self.board_cell.height + (self.playerA.pos.x+1)*self.wall_gap + self.cell_height * 0.25
-            self.playerA.body.left = self.board_bk.left + self.playerA.pos.y*self.board_cell.width + (self.playerA.pos.y+1)*self.wall_gap + self.cell_width * 0.25
-            self.playerA.moved = False
+        self.playerA.body.top = self.board_bk.top + self.playerA.pos.x*self.board_cell.height + (self.playerA.pos.x+1)*self.wall_gap + self.cell_height * 0.25
+        self.playerA.body.left = self.board_bk.left + self.playerA.pos.y*self.board_cell.width + (self.playerA.pos.y+1)*self.wall_gap + self.cell_width * 0.25
         pygame.draw.rect(self.screen, self.PLAYER_A, self.playerA.body)
 
-        if self.playerB.moved:
-            self.playerB.body.top = self.board_bk.top + self.playerB.pos.x*self.board_cell.height + (self.playerB.pos.x+1)*self.wall_gap + self.cell_height * 0.25
-            self.playerB.body.left = self.board_bk.left + self.playerB.pos.y*self.board_cell.width + (self.playerB.pos.y+1)*self.wall_gap + self.cell_width * 0.25
-            self.playerB.moved = False
+        self.playerB.body.top = self.board_bk.top + self.playerB.pos.x*self.board_cell.height + (self.playerB.pos.x+1)*self.wall_gap + self.cell_height * 0.25
+        self.playerB.body.left = self.board_bk.left + self.playerB.pos.y*self.board_cell.width + (self.playerB.pos.y+1)*self.wall_gap + self.cell_width * 0.25
         pygame.draw.rect(self.screen, self.PLAYER_B, self.playerB.body)
 
         if self.buttonLoop.enabled:
@@ -274,7 +279,12 @@ class GameMaster():
             self.playerB.score += 1
             print("[ Debug ] B won.")
         
-        self.state = self.RUNNING
+        elif self.state == self.QUIT: 
+            return
+        
+        else:
+            self.state = self.RUNNING
+        
         self.iteration += 1
 
     def _draw_results(self):
@@ -293,22 +303,15 @@ class GameMaster():
         pygame.display.update()
         
 
-    def _game_thread(self, rounds: int):
+    def _game_thread(self, rounds: int = 1):
         '''
         Any loops that you create inside the "while" main loop must have a check for self.state!
         '''
 
         for round in range(1, rounds+1):
+            
             self.state = self.RUNNING
             self.iteration = 0
-
-            # Reset the player's positions
-            self.playerA.pos.x = 0
-            self.playerA.pos.y = 0
-            self.playerB.pos.x = 9
-            self.playerB.pos.y = 9
-
-            # Reset what each player knows
 
             # Both players know where they start from
             self.maze.data[self.playerA.pos.x][self.playerA.pos.y].visibleA = True
@@ -329,7 +332,7 @@ class GameMaster():
                         countdown_seconds = 5
                         for second in range(countdown_seconds, 0, -1):
                             self.screen.fill((255, 255, 255), self.board_lower)
-                            self.FONT.render_to(self.screen, (self.SCREEN_WIDTH//2-250, self.SCREEN_HEIGHT-20), f"Next game will start in {second} second{'s' if countdown_seconds > 1 else ''}...", (0, 0, 0))
+                            self.FONT.render_to(self.screen, (self.SCREEN_WIDTH//2-170, self.SCREEN_HEIGHT-30), f"Next game will start in {second} second{'s' if second > 1 else ''}...", (0, 0, 0))
 
                             pygame.display.update()
                             if self.state == self.QUIT:
@@ -342,15 +345,34 @@ class GameMaster():
                 if self.state == self.UPDATE_POSITION:
                     self._update_game()
                 
-                if self.iteration == 5:
-                    self.iteration += 1
-                    self.state = self.WIN_A
             
             # Gracefully kill this thread if the main application is closed.
             if self.state == self.QUIT:
                 break
-                
-    
+            
+            # Reset players & maze for a new game iteration.
+            self._create_maze()
+
+            self.playerA.start = (random.randint(0, self.maze.rows-1), random.randint(0, self.maze.columns-1))
+            self.playerA.reset_position()
+            self.playerA.maze = self.maze
+            
+            self.playerB.start = (random.randint(0, self.maze.rows-1), random.randint(0, self.maze.columns-1))
+            self.playerB.reset_position()
+            self.playerB.maze = self.maze
+
+            self.playerA.finish = (random.randint(0, self.maze.rows-1), random.randint(0, self.maze.columns-1))
+            self.playerB.finish = (random.randint(0, self.maze.rows-1), random.randint(0, self.maze.columns-1))
+
+        self.screen.fill((255, 255, 255), self.board_lower)
+        if self.playerA.score > self.playerB.score:
+            self.FONT.render_to(self.screen, (self.SCREEN_WIDTH//2-150, self.SCREEN_HEIGHT-30),"Winner of the tournament is Player A!" , (0,0,0))
+        elif self.playerA.score < self.playerB.score:
+            self.FONT.render_to(self.screen, (self.SCREEN_WIDTH//2-150, self.SCREEN_HEIGHT-30),"Winner of the tournament is Player B!" , (0,0,0))
+        else:
+            self.FONT.render_to(self.screen, (self.SCREEN_WIDTH//2-100, self.SCREEN_HEIGHT-30),"The tournament is a draw!" , (0,0,0))
+        pygame.display.update()
+
     def _run(self, rounds: int=1, delay: int=50):
 
         self.buttonLoop.enabled = False
@@ -465,8 +487,7 @@ class GameMaster():
 
 if __name__ == "__main__":
 
-    gm = GameMaster()
-    DepthFirstSearch(gm.maze, seed=0, gif=False)
+    gm = GameMaster(seed=None)
 
     gm._run(rounds=3)
     # gm.run(rounds=2)

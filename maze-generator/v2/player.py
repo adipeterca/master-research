@@ -6,24 +6,28 @@ class Player():
     '''
     Default class which can be inherited to develop strategies
     '''
-    def __init__(self, name, body: pygame.Rect, maze: Maze, start, finish):
+    def __init__(self, name, body: pygame.Rect, maze: Maze, start=None, finish=None):
         if name not in ("PlayerA", "PlayerB"):
             raise ValueError(f"Player name incorrect <{name}>")
         
         self.name = name
         self.body = body
         self.maze = maze
-        self.pos = Vector2D(start)
         # self.pos.x = start.x
         # self.pos.y = start.y
 
-        self.start = start
-        self.finish = finish
+        self.start = start if start is not None else (random.randint(0, self.maze.rows-1), random.randint(0, self.maze.columns-1))
+        self.finish = finish if finish is not None else (random.randint(0, self.maze.rows-1), random.randint(0, self.maze.columns-1))
+
+        self.pos = Vector2D(self.start)
 
         self.score = 0
         self.moved = False
 
         self.full_discovered = False
+
+    def reset_position(self):
+        self.pos = Vector2D(self.start)
     
     def move(self, dir):
         if dir not in (Maze.NORTH, Maze.EAST, Maze.SOUTH, Maze.WEST):
