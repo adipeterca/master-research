@@ -2,6 +2,7 @@ from amazed.modules.maze import Maze
 from amazed.modules.build import DepthFirstSearch
 from amazed.modules.build import Sculptor
 from player import Player
+from strategies import CopyPlayer
 
 import random
 import pygame
@@ -88,11 +89,13 @@ class GameMaster():
         self.buttonNextMove = Button(pygame.Rect((self.board_bk.left-120, self.board_bk.top+150, 100, 50)), "NEXT MOVE")
 
         # Players settings
-        self.playerA = Player("PlayerA", body=pygame.Rect((0, 0, self.cell_width//2, self.cell_height//2)), maze=self.maze)
+        # self.playerA = Player("PlayerA", body=pygame.Rect((0, 0, self.cell_width//2, self.cell_height//2)), maze=self.maze)
+        self.playerA = CopyPlayer("PlayerA", body=pygame.Rect((0, 0, self.cell_width//2, self.cell_height//2)), maze=self.maze)
         while self.playerA.start == self.playerA.finish:
             self.playerA.finish = (random.randint(0, self.maze.rows-1), random.randint(0, self.maze.columns-1))
         
-        self.playerB = Player("PlayerB", body=pygame.Rect((0, 0, self.cell_width//2, self.cell_height//2)), maze=self.maze)
+        # self.playerB = Player("PlayerB", body=pygame.Rect((0, 0, self.cell_width//2, self.cell_height//2)), maze=self.maze)
+        self.playerB = CopyPlayer("PlayerB", body=pygame.Rect((0, 0, self.cell_width//2, self.cell_height//2)), maze=self.maze)
         while self.playerB.start == self.playerB.finish:
             self.playerB.finish = (random.randint(0, self.maze.rows-1), random.randint(0, self.maze.columns-1))
         
@@ -241,6 +244,11 @@ class GameMaster():
         if self.playerA.wants_negotiation() and self.playerB.wants_negotiation():
             for i in range(3):
                 print(f"[ Negotiation ] Attempt number {i}:")
+                self.playerA.create_offer()
+                self.playerA.create_request()
+
+                self.playerB.create_offer()
+                self.playerB.create_request()
 
                 print(f"[ Negotiation ] A proposal is: \n\tOFFER {self.playerA.offer}\n\tREQUEST {self.playerA.request}")
                 print(f"[ Negotiation ] B proposal is: \n\tOFFER {self.playerB.offer}\n\tREQUEST {self.playerB.request}")
@@ -253,9 +261,9 @@ class GameMaster():
 
                     break
                 else:
-                    print(f"[ Negotiation ] Failure!")
+                    print(f"[ Negotiation ] Attempt {i} failed!")
 
-        print("[ Negotiation ] The Negotiation period ended.")
+        print("[ Negotiation ] The negotiation period ended.")
 
         self.playerA.best_move()
         self.playerB.best_move()
@@ -489,7 +497,7 @@ if __name__ == "__main__":
 
     gm = GameMaster(seed=None)
 
-    gm._run(rounds=3)
+    gm._run(rounds=1)
     # gm.run(rounds=2)
 
 '''

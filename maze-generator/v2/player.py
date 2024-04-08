@@ -39,6 +39,36 @@ class Player():
     def win(self):
         return self.pos.x == self.finish[0] and self.pos.y == self.finish[1]
     
+    def create_offer(self):
+        '''
+        Needs to be implented when inheriting this class
+        '''
+
+        # Look for a random known cell in the maze
+        all_known_cells = []
+        for i in range(self.maze.rows):
+            for j in range(self.maze.columns):
+                if self.name == "PlayerA" and self.maze.data[i][j].visibleA or \
+                     self.name == "PlayerB" and self.maze.data[i][j].visibleB:
+                    all_known_cells.append((i, j))
+        
+        self.offer = random.choice(all_known_cells)
+
+    def create_request(self):
+        '''
+        Needs to be implented when inheriting this class
+        '''
+
+        # Look for a random unknown cell in the maze
+        all_unknown_cells = []
+        for i in range(self.maze.rows):
+            for j in range(self.maze.columns):
+                if self.name == "PlayerA" and not self.maze.data[i][j].visibleA or \
+                     self.name == "PlayerB" and not self.maze.data[i][j].visibleB:
+                    all_unknown_cells.append((i, j))
+        
+        self.request = random.choice(all_unknown_cells)
+
     def wants_negotiation(self) -> bool:
         '''
         Based on what this player knows, does it want to negociate?
@@ -61,12 +91,8 @@ class Player():
             print(f"[ {self.name} ] Does not want negociation because the full maze is known.")
             return False
 
-        # If the answer is yes, proceed with offer & request.
-
-        self.offer = self.start
-        self.request = self.finish
-
         return True
+
     
     def proposal(self, offer, request, attempt=0) -> bool:
         '''

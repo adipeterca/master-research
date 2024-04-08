@@ -44,3 +44,4 @@
 * A player cannot predict or know what strategy the other player is using.
 * ~~A player will receive 6 units of energy at the start of each round. Unused energy will not carry over to the next round.~~
 * Both players will know from the start where the finish point is located.
+* At the moment, both players will always want to negociate.
