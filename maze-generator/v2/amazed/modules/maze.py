@@ -18,6 +18,20 @@ class Vector2D():
         new_y = self.y + other.y
         return Vector2D(new_x, new_y)
     
+    def __sub__(self, other):
+        new_x = self.x - other.x
+        new_y = self.y - other.y
+        return Vector2D(new_x, new_y)
+    
+    def __eq__(self, other):
+        if isinstance(other, Vector2D):
+            return self.x == other.x and self.y == other.y
+        else:
+            return False
+    
+    def __hash__(self):
+        return hash(hash(str(self.x)) + hash(str(self.y)))
+
     def __str__(self):
         return f"({self.x}, {self.y})"
 class Maze:

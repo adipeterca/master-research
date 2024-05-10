@@ -1,6 +1,7 @@
 import pygame
 import random
 from amazed.modules.maze import Maze, Vector2D
+from amazed.modules.solver import AStar
 
 class Player():
     '''
@@ -25,14 +26,21 @@ class Player():
         self.moved = False
 
         self.full_discovered = False
+        # Used after the maze is fully discovered and the path to the finish can be instantly calculated.
+        self.next_best_move = []
 
     def reset_position(self):
         self.pos = Vector2D(self.start)
     
     def move(self, dir):
+        if not isinstance(dir, Vector2D):
+            raise TypeError(f"Invalid type for direction provided: {type(dir)}")
+
+        print(f"dir = {dir}, type = {type(dir)}")
+
         if dir not in (Maze.NORTH, Maze.EAST, Maze.SOUTH, Maze.WEST):
-            raise ValueError(f"Invalid direction provided {dir}")
-        
+            raise ValueError(f"Invalid direction provided {dir}.")
+
         self.pos += dir
         self.moved = True
 
@@ -105,6 +113,21 @@ class Player():
         '''
         Based on what the current situation is, determine what the best move is and perform it.
         '''
+
+        # If the maze is fully discovered, the next best move is always known.
+        if self.full_discovered:
+            if len(self.next_best_move) == 0:
+                # Compute all next moves
+                solver = AStar(self.maze, start=(self.pos.x, self.pos.y), end=self.finish)
+                solver.solve()
+                
+                for i in range(0, len(solver.steps) - 1):
+                    a = Vector2D(solver.steps[i])
+                    b = Vector2D(solver.steps[i+1])
+                    self.next_best_move.append(b - a)
+
+            self.move(self.next_best_move.pop(0))
+            return
 
         # Move in a random direction with more ephasys on exploration (unknown cells).
         next_cells = []

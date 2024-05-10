@@ -495,20 +495,22 @@ class GameMaster():
 
 if __name__ == "__main__":
 
-    gm = GameMaster(seed=None)
+    gm = GameMaster(seed=0)
 
     gm._run(rounds=1)
     # gm.run(rounds=2)
 
 '''
-Ideas:
-* implement a client-server approach for human interaction
+Daca fac o solutie prin care iau niste info despre oferte/request si le reduc la Cooperation/Defect,
+atunci nu are sens sa fac un GA pentru ca tot ce as construi ar fi pe partea de convertire a informatiei
+din oferte/request in C/D.
 
-Todo:
-* [x] clean-up the mess with energy
-* [x] implement score only when winning
-* [x] implement a method of tournaments (with or without graphical interface - first with GUI, then without)
-* finish implementing all strategies (offer and request made to follow the same idea, so no mixing requiered)
-* read about Genetic Algorithms for Iterated Prisoner's Dilemma
-* implement a Genetic Algorithm to create strategies for this game
+Ca sa pot antrena un NOU GA pentru niste solutii, ar trebui sa vad ce anume face o solutie sa fie unica.
+De aici, m-am gandit la implementarea unui meta-GA, care sa targeteze parametrii descrisi (distante si
+acceptabilitate a propunerilor).
+
+Stim ca orice jucator isi face la inceput un DFS Heuristic (pentru ca este cel mai bun compromis intre A*
+care este foarte lent dar precis si un DFS care este foarte rapid dar imprecis) pentru a pune in aplicare
+conceptul de "crowding": nu are sens sa ceri celule foarte indepartate sau celule foarte apropiate, ci 
+trebuie sa gasesti o limita intre acestea.
 '''
