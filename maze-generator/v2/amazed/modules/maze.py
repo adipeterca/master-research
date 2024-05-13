@@ -19,9 +19,22 @@ class Vector2D():
         return Vector2D(new_x, new_y)
     
     def __sub__(self, other):
-        new_x = self.x - other.x
-        new_y = self.y - other.y
+        if isinstance(other, tuple):
+            new_x = self.x - other[0]
+            new_y = self.y - other[1]
+        else:
+            new_x = self.x - other.x
+            new_y = self.y - other.y
         return Vector2D(new_x, new_y)
+    
+    def __rsub__(self, other):
+        if isinstance(other, tuple):
+            new_x = other[0] - self.x
+            new_y = other[1] - self.y
+
+            return Vector2D(new_x, new_y)
+        else:
+            raise TypeError("Unsupported operand types")
     
     def __eq__(self, other):
         if isinstance(other, Vector2D):
@@ -195,6 +208,7 @@ class Maze:
         elif dir == self.EAST: y2 = y + 1
         elif dir == self.SOUTH: x2 = x + 1
         else: y2 = y - 1
+        
 
         if not self.is_valid_position(x2, y2):
             print(f"Not a valid end position: {x2}, {y2}")

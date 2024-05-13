@@ -2,7 +2,7 @@ from amazed.modules.maze import Maze
 from amazed.modules.build import DepthFirstSearch
 from amazed.modules.build import Sculptor
 from player import Player
-from strategies import CopyPlayer
+from strategies import CopyPlayer, Agent
 
 import random
 import pygame
@@ -90,12 +90,14 @@ class GameMaster():
 
         # Players settings
         # self.playerA = Player("PlayerA", body=pygame.Rect((0, 0, self.cell_width//2, self.cell_height//2)), maze=self.maze)
-        self.playerA = CopyPlayer("PlayerA", body=pygame.Rect((0, 0, self.cell_width//2, self.cell_height//2)), maze=self.maze)
+        # self.playerA = CopyPlayer("PlayerA", body=pygame.Rect((0, 0, self.cell_width//2, self.cell_height//2)), maze=self.maze)
+        self.playerA = Agent("PlayerA", body=pygame.Rect((0, 0, self.cell_width//2, self.cell_height//2)), maze=self.maze)
         while self.playerA.start == self.playerA.finish:
             self.playerA.finish = (random.randint(0, self.maze.rows-1), random.randint(0, self.maze.columns-1))
         
         # self.playerB = Player("PlayerB", body=pygame.Rect((0, 0, self.cell_width//2, self.cell_height//2)), maze=self.maze)
-        self.playerB = CopyPlayer("PlayerB", body=pygame.Rect((0, 0, self.cell_width//2, self.cell_height//2)), maze=self.maze)
+        # self.playerB = CopyPlayer("PlayerB", body=pygame.Rect((0, 0, self.cell_width//2, self.cell_height//2)), maze=self.maze)
+        self.playerB = Agent("PlayerB", body=pygame.Rect((0, 0, self.cell_width//2, self.cell_height//2)), maze=self.maze)
         while self.playerB.start == self.playerB.finish:
             self.playerB.finish = (random.randint(0, self.maze.rows-1), random.randint(0, self.maze.columns-1))
         
@@ -256,8 +258,8 @@ class GameMaster():
                 if self.playerA.proposal(self.playerB.offer, self.playerB.request, i) and self.playerB.proposal(self.playerA.offer, self.playerA.request, i):
                     print(f"[ Negotiation ] Succes!")
 
-                    self.maze.data[self.playerA.offer[0]][self.playerA.offer[1]].visibleB = True
                     self.maze.data[self.playerB.offer[0]][self.playerB.offer[1]].visibleA = True
+                    self.maze.data[self.playerA.offer[0]][self.playerA.offer[1]].visibleB = True
 
                     break
                 else:

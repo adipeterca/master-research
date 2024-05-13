@@ -24,7 +24,7 @@ class Player():
 
         self.score = 0
         self.moved = False
-
+        
         self.full_discovered = False
         # Used after the maze is fully discovered and the path to the finish can be instantly calculated.
         self.next_best_move = []
@@ -32,11 +32,9 @@ class Player():
     def reset_position(self):
         self.pos = Vector2D(self.start)
     
-    def move(self, dir):
+    def _move(self, dir):
         if not isinstance(dir, Vector2D):
-            raise TypeError(f"Invalid type for direction provided: {type(dir)}")
-
-        print(f"dir = {dir}, type = {type(dir)}")
+            raise TypeError(f"Invalid type for direction <{dir}> provided: {type(dir)}")
 
         if dir not in (Maze.NORTH, Maze.EAST, Maze.SOUTH, Maze.WEST):
             raise ValueError(f"Invalid direction provided {dir}.")
@@ -108,12 +106,17 @@ class Player():
         '''
         return random.random() > 0.5
 
-        
-    def best_move(self):
+    def visible(self, x, y):
         '''
-        Based on what the current situation is, determine what the best move is and perform it.
+        Is maze[x][y] visible to this player?
         '''
 
+        if self.name == "PlayerA":
+            return self.maze.data[x][y].visibleA
+        return self.maze.data[x][y].visibleB
+        
+        
+    def best_move(self):
         # If the maze is fully discovered, the next best move is always known.
         if self.full_discovered:
             if len(self.next_best_move) == 0:
@@ -126,8 +129,16 @@ class Player():
                     b = Vector2D(solver.steps[i+1])
                     self.next_best_move.append(b - a)
 
-            self.move(self.next_best_move.pop(0))
+            self._move(self.next_best_move.pop(0))
             return
+
+        self._move_strategy()
+    
+    def _move_strategy(self):
+        '''
+        Based on what the current situation is, determine what the best move is and perform it.
+        To be overriden
+        '''
 
         # Move in a random direction with more ephasys on exploration (unknown cells).
         next_cells = []
@@ -146,4 +157,4 @@ class Player():
                     next_cells.append(dir)
                     next_cells.append(dir)
 
-        self.move(random.choice(next_cells))
+        self._move(random.choice(next_cells))
