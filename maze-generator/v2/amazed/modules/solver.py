@@ -97,7 +97,12 @@ class MazeSolver:
         
         distance = 10
 
-        image = self.maze.export(show=False, distance=distance)
+        cell_colors = {
+            f"{self.start[0]}, {self.start[1]}" : Maze.START_COLOR,
+            f"{self.end[0]}, {self.end[1]}" : Maze.END_COLOR
+        }
+
+        image = self.maze.export(show=False, distance=distance, cell_colors=cell_colors)
         draw_image = ImageDraw.Draw(image)
 
         # Convert the steps from cell indexes to actual pixel points
@@ -135,6 +140,7 @@ class DFS(MazeSolver):
                 raise ValueError(f"Could not find a connected path from {self.start} to {self.finish}!")
 
             (x, y) = self.cells[-1]
+            self.steps.append((x, y))
 
             # North
             if self.maze.is_valid_position(x-1, y) and not self.maze.is_wall(x, y, x-1, y) and not (x-1, y) in self.visited:
@@ -162,9 +168,11 @@ class DFS(MazeSolver):
 
             self.cells.pop()
             
+        self.steps.append(self.end)
         # Deep copy the list
-        for cell in self.cells:
-            self.steps.append(cell)
+        # This only shows the final steps (we want the FULL search.)
+        # for cell in self.cells:
+        #     self.steps.append(cell)
 
 
 class DFSRandom(MazeSolver):

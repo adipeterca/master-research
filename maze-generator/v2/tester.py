@@ -9,24 +9,20 @@ from amazed.modules.build import RandomKruskal
 
 # from amazed.modules.solver import DFSHeuristic
 # from amazed.modules.solver import AStar
-# from amazed.modules.solver import DFS
+from amazed.modules.solver import DFS
 
+m = Maze(10, 10)
+cell_colors = {
+    f"{m.rows//2}, 0" : Maze.START_COLOR,
+    f"{m.rows-1}, 0" : Maze.END_COLOR
+}
+for i in range(m.rows):
+    for j in range(m.columns):
+        m.path(j, i, Maze.SOUTH)
 
-import timeit
-
-# m = Maze(20, 20)
-
-# import numpy as np
-# start = timeit.default_timer()
-
-# DepthFirstSearch(m, seed=0, biased_dirs=[Maze.NORTH, Maze.SOUTH], biased_level=10).export(path)
-
-# end = timeit.default_timer()
-# print(f"done {end-start}")
-
-# m.export(output="tmp/maze.png", show=False)
-
-
-pp = timeit.default_timer()
-m = Maze(200, 200)
-print(timeit.default_timer() - pp)
+    m.path(m.rows // 2, i, Maze.EAST)
+m.export(output="tmp/maze.png", cell_colors=cell_colors, show=False)
+a = DFS(m, start=(m.rows//2, 0), end=(m.rows-1, 0))
+a.solve()
+a.image("tmp/maze-dfs.png")
+# a.gif("tmp/maze-dfs.gif")

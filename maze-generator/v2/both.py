@@ -237,6 +237,11 @@ class GameMaster():
         self.FONT.render_to(self.screen, (self.SCREEN_WIDTH//2-50, 20), f"ITERATION: {self.iteration}", (0, 0, 0))
         self.FONT.render_to(self.screen, (self.SCREEN_WIDTH//2+130, 20), f"SCORE: {self.playerB.score}", self.PLAYER_B)
 
+        self.FONT.render_to(self.screen, (self.SCREEN_WIDTH-120, self.SCREEN_HEIGHT//2-50), f"TAXI CAB", (0, 0, 0))
+        self.FONT.render_to(self.screen, (self.SCREEN_WIDTH-120, self.SCREEN_HEIGHT//2-25), f"DISTANCE", (0, 0, 0))
+        self.FONT.render_to(self.screen, (self.SCREEN_WIDTH-100, self.SCREEN_HEIGHT//2), f"A: {self.playerA._distance_metric()}", self.PLAYER_A)
+        self.FONT.render_to(self.screen, (self.SCREEN_WIDTH-100, self.SCREEN_HEIGHT//2+25), f"B: {self.playerB._distance_metric()}", self.PLAYER_B)
+
         pygame.display.update()
 
     def _update_game(self):
@@ -497,22 +502,8 @@ class GameMaster():
 
 if __name__ == "__main__":
 
-    gm = GameMaster(seed=0)
+    # gm = GameMaster(seed=0)
+    gm = GameMaster(seed=10)
 
     gm._run(rounds=1)
     # gm.run(rounds=2)
-
-'''
-Daca fac o solutie prin care iau niste info despre oferte/request si le reduc la Cooperation/Defect,
-atunci nu are sens sa fac un GA pentru ca tot ce as construi ar fi pe partea de convertire a informatiei
-din oferte/request in C/D.
-
-Ca sa pot antrena un NOU GA pentru niste solutii, ar trebui sa vad ce anume face o solutie sa fie unica.
-De aici, m-am gandit la implementarea unui meta-GA, care sa targeteze parametrii descrisi (distante si
-acceptabilitate a propunerilor).
-
-Stim ca orice jucator isi face la inceput un DFS Heuristic (pentru ca este cel mai bun compromis intre A*
-care este foarte lent dar precis si un DFS care este foarte rapid dar imprecis) pentru a pune in aplicare
-conceptul de "crowding": nu are sens sa ceri celule foarte indepartate sau celule foarte apropiate, ci 
-trebuie sa gasesti o limita intre acestea.
-'''

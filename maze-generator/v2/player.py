@@ -17,6 +17,12 @@ class Player():
         # self.pos.x = start.x
         # self.pos.y = start.y
 
+        # Requested cell in tuple(x, y) form
+        self.request = None
+
+        # Offered cell in tuple(x, y) form
+        self.offer = None
+
         self.start = start if start is not None else (random.randint(0, self.maze.rows-1), random.randint(0, self.maze.columns-1))
         self.finish = finish if finish is not None else (random.randint(0, self.maze.rows-1), random.randint(0, self.maze.columns-1))
 
@@ -106,10 +112,19 @@ class Player():
         '''
         return random.random() > 0.5
 
-    def visible(self, x, y):
+    def is_visible(self, x_or_tuple, y=None):
         '''
         Is maze[x][y] visible to this player?
         '''
+
+        if isinstance(x_or_tuple, tuple) and y is None:
+            x = x_or_tuple[0]
+            y = x_or_tuple[1]
+        elif isinstance(x_or_tuple, int) and isinstance(y, int):
+            x = x_or_tuple
+            y = y
+        else:
+            raise TypeError(f"Got type <{type(x_or_tuple)}> for x and <{type(y)}> for y. Excepted either a tuple or two ints.")
 
         if self.name == "PlayerA":
             return self.maze.data[x][y].visibleA

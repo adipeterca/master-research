@@ -251,7 +251,7 @@ class Maze:
                     By default, all cells are colored with DEFAULT_COLOR, except for the start (START_COLOR) and end (END_COLOR).
         @checkers: default background color will change to a checkers pattern.
         """
-        new_data = np.zeros((self.rows * distance, self.columns * distance, 4), dtype=np.uint8)
+        new_data = np.zeros((self.rows * distance, self.columns * distance, 3), dtype=np.uint8)
 
         # Setting default values
         if cell_colors is None:
