@@ -166,13 +166,14 @@ class GameMaster():
         finish_B = start_A
         # # #
 
+        print(f"[ Debug ][ GameMaster ] Set new start/finish positions for both players.\n\t\tPlayerA.start = {start_A}, PlayerA.finish = {finish_A}\n\t\tPlayerB.start = {start_B}, PlayerB.finish = {finish_B}")
         self.playerA.start = start_A
-        self.playerA.reset_position()
         self.playerA.finish = finish_A
+        self.playerA.reset_position()
         
         self.playerB.start = start_B
-        self.playerB.reset_position()
         self.playerB.finish = finish_B
+        self.playerB.reset_position()
 
     def view_a(self):
         self.maze.export(output="tmp/playerA.png", show=False, cell_colors=self.cell_colors_a)
@@ -269,27 +270,28 @@ class GameMaster():
     def _update_game(self):
         if self.playerA.wants_negotiation() and self.playerB.wants_negotiation():
             for i in range(3):
-                print(f"[ Negotiation ] Attempt number {i}:")
+                # print(f"[ Negotiation ] Attempt number {i}:")
                 self.playerA.create_offer()
                 self.playerA.create_request()
 
                 self.playerB.create_offer()
                 self.playerB.create_request()
 
-                print(f"[ Negotiation ] A proposal is: \n\tOFFER {self.playerA.offer}\n\tREQUEST {self.playerA.request}")
-                print(f"[ Negotiation ] B proposal is: \n\tOFFER {self.playerB.offer}\n\tREQUEST {self.playerB.request}")
+                # print(f"[ Negotiation ] A proposal is: \n\tOFFER {self.playerA.offer}\n\tREQUEST {self.playerA.request}")
+                # print(f"[ Negotiation ] B proposal is: \n\tOFFER {self.playerB.offer}\n\tREQUEST {self.playerB.request}")
 
                 if self.playerA.proposal(self.playerB.offer, self.playerB.request, i) and self.playerB.proposal(self.playerA.offer, self.playerA.request, i):
-                    print(f"[ Negotiation ] Succes!")
+                    # print(f"[ Negotiation ] Succes!")
 
                     self.maze.data[self.playerB.offer[0]][self.playerB.offer[1]].visibleA = True
                     self.maze.data[self.playerA.offer[0]][self.playerA.offer[1]].visibleB = True
 
                     break
                 else:
-                    print(f"[ Negotiation ] Attempt {i} failed!")
+                    # print(f"[ Negotiation ] Attempt {i} failed!")
+                    pass
 
-        print("[ Negotiation ] The negotiation period ended.")
+        # print("[ Negotiation ] The negotiation period ended.")
 
         self.playerA.best_move()
         self.playerB.best_move()
@@ -350,14 +352,15 @@ class GameMaster():
             self.state = self.RUNNING
             self.iteration = 0
 
-            print(self.playerA.start)
-            print(self.playerA.finish)
-
+            print(f"[ Debug ][ PlayerA ] Start from {self.playerA.start} and finish at {self.playerA.finish}.")
+            print(f"[ Debug ][ PlayerB ] Start from {self.playerB.start} and finish at {self.playerB.finish}.")
+            
             # Reset players & maze for a new game iteration.
             self._create_maze()
             self._create_start_finish()
-            print(self.playerA.start)
-            print(self.playerA.finish)
+
+            print(f"[ Debug ][ PlayerA ] (after recalculation) Start from {self.playerA.start} and finish at {self.playerA.finish}.")
+            print(f"[ Debug ][ PlayerB ] (after recalculation) Start from {self.playerB.start} and finish at {self.playerB.finish}.")
 
             # Both players know where they start from
             self.maze.data[self.playerA.pos.x][self.playerA.pos.y].visibleA = True
@@ -466,7 +469,7 @@ if __name__ == "__main__":
     # gm.run(rounds=1, training=True)
     # exit()
 
-    GENERATIONS = 1
+    GENERATIONS = 20
     CHROMOSOME_LENGTH = 32
     POP_LENGHT = 20
     POPULATION = []
@@ -484,11 +487,13 @@ if __name__ == "__main__":
         print("-" * 20)
         print(f"[ GA ] Current generation: {gen}")
 
+        # Problematic seeds:
+        # 14 is a draw (nice)
+        # 15 is a problem
+        gm = GameMaster(seed=15)
         # gm = GameMaster(seed=None)
-        gm = GameMaster(seed=0)
 
-        # gm.run(training=True)
-        gm.run()
+        gm.run(training=True)
         
         if gm.state == GameMaster.QUIT:
             break

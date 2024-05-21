@@ -50,48 +50,43 @@ class Player():
         '''
         self.pos = Vector2D(self.start)
         self._internal_dfs()
-    
-    def _move_old(self, dir):
-        if not isinstance(dir, Vector2D):
-            raise TypeError(f"[ {self.name} ] Invalid type for direction <{dir}> provided: {type(dir)}")
 
-        if dir not in (Maze.NORTH, Maze.EAST, Maze.SOUTH, Maze.WEST):
-            raise ValueError(f"[ {self.name} ] Invalid direction provided {dir}.")
+    def _move(self, next_cell: tuple | Vector2D):
+        if not isinstance(next_cell, tuple) and not isinstance(next_cell, Vector2D):
+            raise TypeError(f"[ {self.name} ] Invalid type for direction <{next_cell}> provided: {type(next_cell)}")
 
-        self.pos += dir
-        self.moved = True
-
-    def _move(self, direction: tuple | Vector2D):
-        if not isinstance(direction, tuple) and not isinstance(direction, Vector2D):
-            raise TypeError(f"[ {self.name} ] Invalid type for direction <{direction}> provided: {type(direction)}")
-
-        if isinstance(direction, tuple):
-            direction = Vector2D(direction)
+        if isinstance(next_cell, tuple):
+            next_cell = Vector2D(next_cell)
         
+        # Cannot use this logic because direction (0, 1) and POSITION (0, 1) cannot be distingusied.
+        # Only using CONCREATE POSITIONS from now on.
+        # if direction not in (Maze.NORTH, Maze.EAST, Maze.SOUTH, Maze.WEST):
+        #     print(f"[ {self.name} ] Invalid direction provided {direction} from location {self.pos}. Trying to convert it to an actual direction instead of a location...")
+        #     new_direction = direction - self.pos
+
+        #     if new_direction not in (Maze.NORTH, Maze.EAST, Maze.SOUTH, Maze.WEST):
+        #         raise ValueError(f"[ {self.name} ] Tried converting {direction} to {new_direction} but still failed...\nCurrent position: {self.pos}\nDFS stack: {self.dfs_stack}")
+
+        #     direction = new_direction
+        # else:
+        #     print(f"[ {self.name} ] Nice! From current position {self.pos} moving in direction {direction}, which means position {self.pos + direction}")
+        direction = next_cell - self.pos
         if direction not in (Maze.NORTH, Maze.EAST, Maze.SOUTH, Maze.WEST):
-            print(f"[ {self.name} ] Invalid direction provided {direction}. Trying to convert it to an actual direction instead of a location...")
-            new_direction = direction - self.pos
-
-            if new_direction not in (Maze.NORTH, Maze.EAST, Maze.SOUTH, Maze.WEST):
-                raise ValueError(f"[ {self.name} ] Tried converting {direction} to {new_direction} but still failed...")
-
-            direction = new_direction
+            raise ValueError(f"[ {self.name} ] You cannot go from current position {self.pos} to the next cell {next_cell}...\nDFS stack: {self.dfs_stack}")
         
         # NICE LOGIC
         # Discover a cell if you are trying to move towards it and you cannot.
-        dest = self.pos + direction
-        if self.maze.is_wall(self.pos.x, self.pos.y, dest.x, dest.y):
-            print(f"[ Debug ][ {self.name} ] Hit a wall trying to go from {self.pos} to {dest}! Not moving this round...")
+        if self.maze.is_wall(self.pos.x, self.pos.y, next_cell.x, next_cell.y):
+            print(f"[ Debug ][ {self.name} ] Hit a wall trying to go from {self.pos} to {next_cell}! Not moving this round...")
             if self.name == "PlayerA":
-                self.maze.data[dest.x][dest.y].visibleA = True
+                self.maze.data[next_cell.x][next_cell.y].visibleA = True
             else:
-                self.maze.data[dest.x][dest.y].visibleB = True
+                self.maze.data[next_cell.x][next_cell.y].visibleB = True
             self._internal_dfs()
             self.turn_counter = 0
         else:
-            print(f"[ Debug ][ {self.name} ] Moving from {self.pos} to ", end="")
-            print(f"{self.pos}.")
-            self.pos += direction
+            print(f"[ Debug ][ {self.name} ] Moving from {self.pos} to {next_cell}")
+            self.pos = next_cell
             self.moved = True
         # END NICE LOGIC
 
@@ -131,10 +126,9 @@ class Player():
 
     def wants_negotiation(self) -> bool:
         if self.full_discovered:
-            print(f"[ {self.name} ] Does not want negociation because the full maze is known.")
+            print(f"[ Info ][ {self.name} ] Does not want negociation because the full path to finish is known.\nDFS stack: {self.dfs_stack}")
             return False
 
-        # Make a strategy to decide
         self.full_discovered = True
         for cell in self.dfs_stack:
             if not self.is_visible(cell):
@@ -142,7 +136,7 @@ class Player():
                 break
         
         if self.full_discovered:
-            print(f"[ {self.name} ] Does not want negociation because the full maze is known.")
+            print(f"[ Info ][ {self.name} ] Does not want negociation because the full path to finish is known (for the first time.).\nDFS stack: {self.dfs_stack}")
             return False
 
         return True
@@ -180,13 +174,10 @@ class Player():
             # position = dest - self.pos
             # self._move(position)
             # return
+            print(f"[ Debug ][ {self.name} ] Trying to pop from DFS stack because the path to finish is fully discovered...")
             self._move(self.dfs_stack.pop(0))
             return
 
-        self._move_strategy()
-    
-    def _move_strategy(self):
-        # Initial DFS
         if len(self.dfs_stack) == 0:
             self._internal_dfs()
         
@@ -196,25 +187,8 @@ class Player():
         else:
             self.turn_counter += 1
         
+        print(f"[ Debug ][ {self.name} ] Trying to pop from DFS stack the next move...")
         self._move(self.dfs_stack.pop(0))
-        # dest = Vector2D(self.dfs_stack.pop(0))
-        # position = dest - self.pos
-
-        # # NICE LOGIC
-        # # Discover a cell if you are trying to move towards it and you cannot.
-        # if self.maze.is_wall(self.pos.x, self.pos.y, dest.x, dest.y):
-        #     print(f"[ Debug ][ {self.name} ] Hit a wall trying to go from {self.pos} to {dest}! Not moving this round...")
-        #     if self.name == "PlayerA":
-        #         self.maze.data[dest.x][dest.y].visibleA = True
-        #     else:
-        #         self.maze.data[dest.x][dest.y].visibleB = True
-        #     self._internal_dfs()
-        #     self.turn_counter = 0
-        # else:
-        #     print(f"[ Debug ][ {self.name} ] Moving from {self.pos} to ", end="")
-        #     self._move(position)
-        #     print(f"{self.pos}.")
-        # # END NICE LOGIC
 
     def _distance_metric(self, start=None, end=None):
 
@@ -237,7 +211,7 @@ class Player():
         # How much penalty should taking an unknown cell step add to the total distance
         unknown_penalty = 1.2
 
-        print(f"[ Debug ][ {self.name} ] Recalculating DFS. From {self.start} to {self.finish}")
+        print(f"[ Debug ][ {self.name} ] Recalculating DFS. From current position {self.pos} to finish at {self.finish}")
 
         self.dfs_stack.clear()
         self.dfs_stack.append((self.pos.x, self.pos.y))
