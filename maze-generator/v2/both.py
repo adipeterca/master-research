@@ -1,8 +1,8 @@
 from amazed.modules.maze import Maze
 from amazed.modules.build import DepthFirstSearch
 from amazed.modules.build import Sculptor
-from player import Player
-from strategies import CopyPlayer, Agent
+from strategies import Agent
+from strategies import Player
 
 import random
 import pygame
@@ -48,6 +48,7 @@ class GameMaster():
     WIN_B = 6
     DRAW = 7
     UPDATE_POSITION = 8
+    USER_QUIT = 9
 
     SCREEN_WIDTH = 800
     SCREEN_HEIGHT = 600
@@ -60,11 +61,11 @@ class GameMaster():
             self.visibleB = False
 
 
-    def __init__(self, maze_algorithm_class: Sculptor = DepthFirstSearch, seed = 0):
+    def __init__(self, maze_algorithm_class: Sculptor = DepthFirstSearch, seed = 0, playerA : Player=None, playerB : Player=None):
         self._maze_algorithm_class = maze_algorithm_class
         self._seed = seed
 
-        self._create_maze()
+        self.maze = Maze(10, 10, self.GameCell)
 
         # General settings
         pygame.init()
@@ -89,17 +90,15 @@ class GameMaster():
         self.buttonNextMove = Button(pygame.Rect((self.board_bk.left-120, self.board_bk.top+150, 100, 50)), "NEXT MOVE")
 
         # Players settings
-        # self.playerA = Player("PlayerA", body=pygame.Rect((0, 0, self.cell_width//2, self.cell_height//2)), maze=self.maze)
-        # self.playerA = CopyPlayer("PlayerA", body=pygame.Rect((0, 0, self.cell_width//2, self.cell_height//2)), maze=self.maze)
-        self.playerA = Agent("PlayerA", body=pygame.Rect((0, 0, self.cell_width//2, self.cell_height//2)), maze=self.maze)
-        while self.playerA.start == self.playerA.finish:
-            self.playerA.finish = (random.randint(0, self.maze.rows-1), random.randint(0, self.maze.columns-1))
+        if playerA is None:
+            self.playerA = Agent("PlayerA", body=pygame.Rect((0, 0, self.cell_width//2, self.cell_height//2)), maze=self.maze)
+        else:
+            self.playerA = playerA
         
-        # self.playerB = Player("PlayerB", body=pygame.Rect((0, 0, self.cell_width//2, self.cell_height//2)), maze=self.maze)
-        # self.playerB = CopyPlayer("PlayerB", body=pygame.Rect((0, 0, self.cell_width//2, self.cell_height//2)), maze=self.maze)
-        self.playerB = Agent("PlayerB", body=pygame.Rect((0, 0, self.cell_width//2, self.cell_height//2)), maze=self.maze)
-        while self.playerB.start == self.playerB.finish:
-            self.playerB.finish = (random.randint(0, self.maze.rows-1), random.randint(0, self.maze.columns-1))
+        if playerB is None:
+            self.playerB = Agent("PlayerB", body=pygame.Rect((0, 0, self.cell_width//2, self.cell_height//2)), maze=self.maze)
+        else:
+            self.playerB = playerB
         
         self.finishA = pygame.Rect((0, 0, self.cell_width // 4, self.cell_height // 4))
         self.finishB = pygame.Rect((0, 0, self.cell_width // 4, self.cell_height // 4))
@@ -107,7 +106,10 @@ class GameMaster():
         self.state = self.NONE
 
     def _create_maze(self):
-        self.maze = Maze(10, 10, self.GameCell)
+        '''
+        Destroys the current maze and recreates it.
+        '''
+        self.maze.reset()
         self._maze_algorithm_class(self.maze, seed=self._seed, gif=False)
         # DepthFirstSearch(self.maze, gif=False)
 
@@ -148,6 +150,29 @@ class GameMaster():
                 if self.maze.data[i][j].visibleA and self.maze.data[i][j].visibleB:
                     print(f"Marked cell {i}, {j} as visible to both.")
 
+        self.playerA.maze = self.maze
+        self.playerB.maze = self.maze
+
+
+    def _create_start_finish(self):
+        
+        # # #
+        # ALMOST ZERO SUM GAME
+        start_A = (random.randint(0, self.maze.rows-1), random.randint(0, self.maze.columns-1))
+        finish_A = (random.randint(0, self.maze.rows-1), random.randint(0, self.maze.columns-1))
+        while start_A == finish_A:
+            finish_A = (random.randint(0, self.maze.rows-1), random.randint(0, self.maze.columns-1))
+        start_B = finish_A
+        finish_B = start_A
+        # # #
+
+        self.playerA.start = start_A
+        self.playerA.reset_position()
+        self.playerA.finish = finish_A
+        
+        self.playerB.start = start_B
+        self.playerB.reset_position()
+        self.playerB.finish = finish_B
 
     def view_a(self):
         self.maze.export(output="tmp/playerA.png", show=False, cell_colors=self.cell_colors_a)
@@ -167,9 +192,6 @@ class GameMaster():
         self.maze.export(output="tmp/all.png", show=False, cell_colors=all_cell_colors)
 
     def _draw_screen(self):
-        '''
-        
-        '''
         self.screen.fill((255, 255, 255))
         self.screen.fill((0, 0, 0), self.board_bk)
 
@@ -237,17 +259,14 @@ class GameMaster():
         self.FONT.render_to(self.screen, (self.SCREEN_WIDTH//2-50, 20), f"ITERATION: {self.iteration}", (0, 0, 0))
         self.FONT.render_to(self.screen, (self.SCREEN_WIDTH//2+130, 20), f"SCORE: {self.playerB.score}", self.PLAYER_B)
 
-        self.FONT.render_to(self.screen, (self.SCREEN_WIDTH-120, self.SCREEN_HEIGHT//2-50), f"TAXI CAB", (0, 0, 0))
-        self.FONT.render_to(self.screen, (self.SCREEN_WIDTH-120, self.SCREEN_HEIGHT//2-25), f"DISTANCE", (0, 0, 0))
-        self.FONT.render_to(self.screen, (self.SCREEN_WIDTH-100, self.SCREEN_HEIGHT//2), f"A: {self.playerA._distance_metric()}", self.PLAYER_A)
-        self.FONT.render_to(self.screen, (self.SCREEN_WIDTH-100, self.SCREEN_HEIGHT//2+25), f"B: {self.playerB._distance_metric()}", self.PLAYER_B)
+        self.FONT.render_to(self.screen, (self.SCREEN_WIDTH-120, self.SCREEN_HEIGHT//2-50), f"DISTANCE", (0, 0, 0))
+        self.FONT.render_to(self.screen, (self.SCREEN_WIDTH-120, self.SCREEN_HEIGHT//2-25), f"TO FINISH", (0, 0, 0))
+        self.FONT.render_to(self.screen, (self.SCREEN_WIDTH-100, self.SCREEN_HEIGHT//2), f"A: {len(self.playerA.dfs_stack)}", self.PLAYER_A)
+        self.FONT.render_to(self.screen, (self.SCREEN_WIDTH-100, self.SCREEN_HEIGHT//2+25), f"B: {len(self.playerB.dfs_stack)}", self.PLAYER_B)
 
         pygame.display.update()
 
     def _update_game(self):
-        '''
-        
-        '''
         if self.playerA.wants_negotiation() and self.playerB.wants_negotiation():
             for i in range(3):
                 print(f"[ Negotiation ] Attempt number {i}:")
@@ -318,15 +337,27 @@ class GameMaster():
         pygame.display.update()
         
 
-    def _game_thread(self, rounds: int = 1):
+    def _game_thread(self, rounds: int=1):
         '''
         Any loops that you create inside the "while" main loop must have a check for self.state!
         '''
+
+        # Holds who exactly won in each round
+        self.results = []
 
         for round in range(1, rounds+1):
             
             self.state = self.RUNNING
             self.iteration = 0
+
+            print(self.playerA.start)
+            print(self.playerA.finish)
+
+            # Reset players & maze for a new game iteration.
+            self._create_maze()
+            self._create_start_finish()
+            print(self.playerA.start)
+            print(self.playerA.finish)
 
             # Both players know where they start from
             self.maze.data[self.playerA.pos.x][self.playerA.pos.y].visibleA = True
@@ -341,6 +372,7 @@ class GameMaster():
 
                 if self.state in (self.WIN_A, self.WIN_B, self.DRAW):
                     self._draw_results()
+                    self.results.append(self.state)
 
                     # If it is not the last round
                     if round != rounds:
@@ -360,24 +392,9 @@ class GameMaster():
                 if self.state == self.UPDATE_POSITION:
                     self._update_game()
                 
-            
             # Gracefully kill this thread if the main application is closed.
             if self.state == self.QUIT:
                 break
-            
-            # Reset players & maze for a new game iteration.
-            self._create_maze()
-
-            self.playerA.start = (random.randint(0, self.maze.rows-1), random.randint(0, self.maze.columns-1))
-            self.playerA.reset_position()
-            self.playerA.maze = self.maze
-            
-            self.playerB.start = (random.randint(0, self.maze.rows-1), random.randint(0, self.maze.columns-1))
-            self.playerB.reset_position()
-            self.playerB.maze = self.maze
-
-            self.playerA.finish = (random.randint(0, self.maze.rows-1), random.randint(0, self.maze.columns-1))
-            self.playerB.finish = (random.randint(0, self.maze.rows-1), random.randint(0, self.maze.columns-1))
 
         self.screen.fill((255, 255, 255), self.board_lower)
         if self.playerA.score > self.playerB.score:
@@ -388,16 +405,25 @@ class GameMaster():
             self.FONT.render_to(self.screen, (self.SCREEN_WIDTH//2-100, self.SCREEN_HEIGHT-30),"The tournament is a draw!" , (0,0,0))
         pygame.display.update()
 
-    def _run(self, rounds: int=1, delay: int=50):
+    def run(self, rounds: int=1, delay: int=50, training: bool=False):
+        '''
+        @training   : set to True only when performing GA strategies. \n
+        '''
 
-        self.buttonLoop.enabled = False
-        self.buttonNextMove.enabled = True
+        if not training:
+            self.buttonLoop.enabled = False
+            self.buttonNextMove.enabled = True
+        else:
+            self.buttonLoop.enabled = True
+            self.buttonNextMove.enabled = False
+
 
         game_thread = Thread(target=self._game_thread, args=(rounds, ))
         game_thread.start()
 
         # Only handle inputs
-        while self.state != self.QUIT:
+        while self.state != self.QUIT and self.state != self.USER_QUIT:
+            
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.state = self.QUIT
@@ -419,91 +445,61 @@ class GameMaster():
             if self.buttonLoop.enabled and self.state != self.QUIT:
                 pygame.time.delay(delay)
                 self.state = self.UPDATE_POSITION
+            
+            # All rounds were played
+            if len(self.results) == rounds:
+                game_thread.join()
+                pygame.quit()
+                print("[ Debug ] Training finished, the application closed normally.")
+                return
         
         game_thread.join()
         pygame.quit()
         print("[ Debug ] The application was closed by the user.")
 
-    def run(self, rounds:int=1):
-        '''
-        @rounds : how many game rounds to play
-        '''
-        
-        self.buttonLoop.enabled = False
-
-        for round in range(1, rounds+1):
-
-            self.state = self.RUNNING
-            self.iteration = 0
-            while self.state != self.QUIT:
-
-                self._draw_screen()
-
-                # Only update the position if it was actually modified
-                if self.state == self.UPDATE_POSITION:
-                    
-                    self._update_game()
-
-                    if self.playerA.win() and self.playerB.win():
-                        self.state = self.DRAW
-                        self.playerA.score += 1
-                        self.playerB.score += 1
-                        print("[ Debug ] Draw.")
-
-                    elif self.playerA.win():
-                        self.state = self.WIN_A
-                        self.playerA.score += 1
-                        print("[ Debug ] A won.")
-
-                    elif self.playerB.win():
-                        self.state = self.WIN_B
-                        self.playerB.score += 1
-                        print("[ Debug ] B won.")
-
-                    
-                    self.state = self.RUNNING
-                    self.iteration += 1
-
-                if self.state == self.RUNNING:
-                    for event in pygame.event.get():
-                        if event.type == pygame.QUIT:
-                            self.state = self.QUIT
-                            break
-
-                        if event.type == pygame.MOUSEBUTTONDOWN:
-                            pos = pygame.mouse.get_pos()
-                            if self.buttonLoop.enabled and self.buttonLoop.inside(pos):
-                                self.buttonLoop.enabled = not self.buttonLoop.enabled
-                                self.buttonNextMove.enabled = not self.buttonLoop.enabled
-
-                            if self.buttonNextMove.enabled and self.buttonNextMove.inside(pos):
-                                self.state = self.UPDATE_POSITION
-                        
-                    if self.buttonLoop.enabled and self.state != self.QUIT:
-                        pygame.time.delay(50)
-                        self.state = self.UPDATE_POSITION
-
-                # self.state=self.WIN_A
-                if self.state in (self.WIN_A, self.WIN_B, self.DRAW):
-                    self._draw_results(self.state)
-
-                    # If it is not the last round
-                    if round != rounds:
-                        self._draw_countdown()
-                    while self.state != self.QUIT:
-                        for event in pygame.event.get():
-                            if event.type == pygame.QUIT:
-                                self.state = self.QUIT
-            
-            if self.state == self.QUIT:
-                break
-        pygame.quit()
-        print("[ Debug ] The application was closed by the user.")
 
 if __name__ == "__main__":
 
     # gm = GameMaster(seed=0)
-    gm = GameMaster(seed=10)
+    # gm = GameMaster(seed=10)
 
-    gm._run(rounds=1)
-    # gm.run(rounds=2)
+    # gm.run(rounds=1, training=True)
+    # exit()
+
+    GENERATIONS = 1
+    CHROMOSOME_LENGTH = 32
+    POP_LENGHT = 20
+    POPULATION = []
+    for i in range(POP_LENGHT):
+        individual = ""
+        for ii in range(CHROMOSOME_LENGTH):
+            if random.random() >= 0.5:
+                individual += "0"
+            else:
+                individual += "1"
+        POPULATION.append(individual)
+    
+
+    for gen in range(1, GENERATIONS+1):
+        print("-" * 20)
+        print(f"[ GA ] Current generation: {gen}")
+
+        # gm = GameMaster(seed=None)
+        gm = GameMaster(seed=0)
+
+        # gm.run(training=True)
+        gm.run()
+        
+        if gm.state == GameMaster.QUIT:
+            break
+
+        for e, state in enumerate(gm.results):
+            if state == GameMaster.WIN_A:
+                print(f"[ GA ][ Round {e+1} ] A won.")
+            elif state == GameMaster.WIN_B:
+                print(f"[ GA ][ Round {e+1} ] B won.")
+            elif state == GameMaster.DRAW:
+                print(f"[ GA ][ Round {e+1} ] Draw.")
+            else:
+                raise ValueError(f"What kind of state <{type(state)}> with value <{state}> did you append in round {e}?")
+            

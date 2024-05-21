@@ -91,8 +91,17 @@ class Maze:
         
         self.rows = rows
         self.columns = columns
+        self.cell_type = constructor
         self.no_cells = rows * columns
         self.no_walls = rows + columns + 2 * rows * columns
+
+    def reset(self):
+        self.data.clear()
+        for i in range(self.rows):
+            _ = []
+            for j in range(self.columns):
+                _.append(self.cell_type())
+            self.data.append(_)
     
     def path(self, x, y, direction):
         '''

@@ -8,6 +8,7 @@ from amazed.modules.maze import Maze
 
 class Sculptor():
     '''
+    Default class for all maze generation classes.\n
     Carves a maze in-place.
     '''
     def __init__(self, maze: Maze, seed: int = None, gif: bool = True) -> None:

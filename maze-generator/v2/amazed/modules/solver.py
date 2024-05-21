@@ -4,7 +4,7 @@ import numpy as np
 from random import shuffle
 from PIL import ImageDraw
 
-from keras.models import Sequential
+# from keras.models import Sequential
 
 def standard_euclidian(start, end):
     (x, y) = start
@@ -433,7 +433,8 @@ class ReinforcementLearningSolver(MazeSolver):
     The training should be external in order to prevent too much coupling
     '''
     
-    def solve(self, model : Sequential, max_iter : int = None):
+    # def solve(self, model : Sequential, max_iter : int = None):
+    def solve(self, model, max_iter : int = None):
         
         self.curr_cell = self.start
 
