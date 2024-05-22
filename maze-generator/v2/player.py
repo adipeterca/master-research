@@ -37,7 +37,7 @@ class Player():
         
         # Recalculate the DFS path every X turns
         self.turn_counter = 0
-        self.turn_recalculate = 10
+        self.turn_recalculate = 15
         
         self.full_discovered = False
         # Used after the maze is fully discovered and the path to the finish can be instantly calculated.
@@ -58,18 +58,6 @@ class Player():
         if isinstance(next_cell, tuple):
             next_cell = Vector2D(next_cell)
         
-        # Cannot use this logic because direction (0, 1) and POSITION (0, 1) cannot be distingusied.
-        # Only using CONCREATE POSITIONS from now on.
-        # if direction not in (Maze.NORTH, Maze.EAST, Maze.SOUTH, Maze.WEST):
-        #     print(f"[ {self.name} ] Invalid direction provided {direction} from location {self.pos}. Trying to convert it to an actual direction instead of a location...")
-        #     new_direction = direction - self.pos
-
-        #     if new_direction not in (Maze.NORTH, Maze.EAST, Maze.SOUTH, Maze.WEST):
-        #         raise ValueError(f"[ {self.name} ] Tried converting {direction} to {new_direction} but still failed...\nCurrent position: {self.pos}\nDFS stack: {self.dfs_stack}")
-
-        #     direction = new_direction
-        # else:
-        #     print(f"[ {self.name} ] Nice! From current position {self.pos} moving in direction {direction}, which means position {self.pos + direction}")
         direction = next_cell - self.pos
         if direction not in (Maze.NORTH, Maze.EAST, Maze.SOUTH, Maze.WEST):
             raise ValueError(f"[ {self.name} ] You cannot go from current position {self.pos} to the next cell {next_cell}...\nDFS stack: {self.dfs_stack}")

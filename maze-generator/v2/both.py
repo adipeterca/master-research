@@ -301,8 +301,6 @@ class GameMaster():
 
         if self.playerA.win() and self.playerB.win():
             self.state = self.DRAW
-            self.playerA.score += 1
-            self.playerB.score += 1
             print("[ Debug ] Draw.")
 
         elif self.playerA.win():
@@ -378,7 +376,7 @@ class GameMaster():
                     self.results.append(self.state)
 
                     # If it is not the last round
-                    if round != rounds:
+                    if round != rounds and not self.training:
                         countdown_seconds = 5
                         for second in range(countdown_seconds, 0, -1):
                             self.screen.fill((255, 255, 255), self.board_lower)
@@ -416,9 +414,11 @@ class GameMaster():
         if not training:
             self.buttonLoop.enabled = False
             self.buttonNextMove.enabled = True
+            self.training = False
         else:
             self.buttonLoop.enabled = True
             self.buttonNextMove.enabled = False
+            self.training = True
 
 
         game_thread = Thread(target=self._game_thread, args=(rounds, ))
@@ -463,48 +463,117 @@ class GameMaster():
 
 if __name__ == "__main__":
 
-    # gm = GameMaster(seed=0)
-    # gm = GameMaster(seed=10)
-
-    # gm.run(rounds=1, training=True)
-    # exit()
-
-    GENERATIONS = 20
-    CHROMOSOME_LENGTH = 32
-    POP_LENGHT = 20
+    GENERATIONS = 1
+    CHROMOSOME_LENGTH = 8
+    POP_LENGHT = 4          # Aim for an even number (see crossover)
     POPULATION = []
+
+    MUTATION_CHANCE = 0.4
+    CROSSOVER_CHANCE = 0.8
+
     for i in range(POP_LENGHT):
-        individual = ""
+        individual = []
         for ii in range(CHROMOSOME_LENGTH):
             if random.random() >= 0.5:
-                individual += "0"
+                individual.append("0")
             else:
-                individual += "1"
+                individual.append("1")
         POPULATION.append(individual)
-    
 
     for gen in range(1, GENERATIONS+1):
         print("-" * 20)
-        print(f"[ GA ] Current generation: {gen}")
+        print(f"[ GA ] Current generation: {gen:<2}")
 
-        # Problematic seeds:
-        # 14 is a draw (nice)
-        # 15 is a problem
-        gm = GameMaster(seed=15)
-        # gm = GameMaster(seed=None)
+        scores = {}
 
-        gm.run(training=True)
+        for i, strategyA in enumerate(POPULATION):
+            for j, strategyB in enumerate(POPULATION):
+
+                print(f"[ GA ] Evaluating strategies {i} vs {j}")
+
+                gm = GameMaster(seed=None)
+                gm.playerA.strategy = strategyA
+                gm.playerB.strategy = strategyB
+
+                gm.run(training=True)
+
+                indexA = "".join(strategyA)
+                indexB = "".join(strategyB)
+
+                if indexA in scores:
+                    scores[indexA] += gm.playerA.score
+                else:
+                    scores[indexA] = gm.playerA.score
+                
+                if indexB in scores:
+                    scores[indexB] += gm.playerB.score
+                else:
+                    scores[indexB] = gm.playerB.score
+                
+
+                if gm.state == GameMaster.QUIT:
+                    exit()
+
+                for e, state in enumerate(gm.results):
+                    if state == GameMaster.WIN_A:
+                        print(f"[ GA ][ Round {e+1:<2} ] A won.")
+                    elif state == GameMaster.WIN_B:
+                        print(f"[ GA ][ Round {e+1:<2} ] B won.")
+                    elif state == GameMaster.DRAW:
+                        print(f"[ GA ][ Round {e+1:<2} ] Draw.")
+                    else:
+                        raise ValueError(f"What kind of state <{type(state)}> with value <{state}> did you append in round {e}?")
+                    
+        # sorted_scores = dict(sorted(scores.items(), key=lambda item: item[1]))
+        print("[ GA ] Scores:")
+        for key, value in scores.items():
+            print(f"{key}: {value}")
+
+        total_fitness = sum(scores.values())
+        probabilities = [f / total_fitness for f in scores.values()]
+
+        cumulative_probabilities = []
+        cumulative_sum = 0
+        for p in probabilities:
+            cumulative_sum += p
+            cumulative_probabilities.append(cumulative_sum)
+
+        # Selection using roulette wheel
+        new_pop = []
+        for i in range(POP_LENGHT):
+            spin = random.random()
+            for j in range(0, len(cumulative_probabilities) - 1):
+                if spin < cumulative_probabilities[j]:
+                    new_pop.append(POPULATION[j])
+
+        print("[ GA ] New population:")
+        print(*new_pop, sep="\n")
+
+        # Crossover
+        for i in range(0, POP_LENGHT, 2):
+            if random.random() < CROSSOVER_CHANCE:
+                crossover_point = CHROMOSOME_LENGTH // 2
+
+                x = new_pop[i][:crossover_point] + new_pop[i+1][crossover_point:]
+                y = new_pop[i+1][:crossover_point] + new_pop[i][crossover_point:]
+
+                new_pop[i] = x
+                new_pop[i+1] = y
         
-        if gm.state == GameMaster.QUIT:
-            break
+        print("[ GA ] New population (after crossover):")
+        print(*new_pop, sep="\n")
 
-        for e, state in enumerate(gm.results):
-            if state == GameMaster.WIN_A:
-                print(f"[ GA ][ Round {e+1} ] A won.")
-            elif state == GameMaster.WIN_B:
-                print(f"[ GA ][ Round {e+1} ] B won.")
-            elif state == GameMaster.DRAW:
-                print(f"[ GA ][ Round {e+1} ] Draw.")
-            else:
-                raise ValueError(f"What kind of state <{type(state)}> with value <{state}> did you append in round {e}?")
-            
+        for i in range(POP_LENGHT):
+            for j in range(CHROMOSOME_LENGTH):
+                if random.random() < MUTATION_CHANCE:
+                    if new_pop[i][j] == "0":
+                        new_pop[i][j] = "1"
+                    elif new_pop[i][j] == "1":
+                        new_pop[i][j] = "0"
+                    else:
+                        raise ValueError(f"[ GA ] What :keklmao: {new_pop[i][j]}")
+                    
+        print("[ GA ] New population (after mutation):")
+        print(*new_pop, sep="\n")
+        
+        POPULATION = new_pop
