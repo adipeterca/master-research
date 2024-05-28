@@ -51,7 +51,8 @@ class Player():
         self.pos = Vector2D(self.start)
         self._internal_dfs()
 
-    def _move(self, next_cell: tuple | Vector2D):
+    # def _move(self, next_cell: tuple | Vector2D):
+    def _move(self, next_cell: tuple):
         if not isinstance(next_cell, tuple) and not isinstance(next_cell, Vector2D):
             raise TypeError(f"[ {self.name} ] Invalid type for direction <{next_cell}> provided: {type(next_cell)}")
 
@@ -153,7 +154,24 @@ class Player():
         if self.name == "PlayerA":
             return self.maze.data[x][y].visibleA
         return self.maze.data[x][y].visibleB
-        
+    
+    def is_visible_to_opponent(self, x_or_tuple, y=None):
+        '''
+        Is maze[x][y] visible to the opponent?
+        '''
+
+        if isinstance(x_or_tuple, tuple) and y is None:
+            x = x_or_tuple[0]
+            y = x_or_tuple[1]
+        elif isinstance(x_or_tuple, int) and isinstance(y, int):
+            x = x_or_tuple
+            y = y
+        else:
+            raise TypeError(f"Got type <{type(x_or_tuple)}> for x and <{type(y)}> for y. Excepted either a tuple or two ints.")
+
+        if self.name == "PlayerA":
+            return self.maze.data[x][y].visibleB
+        return self.maze.data[x][y].visibleA
         
     def best_move(self):
         # If the maze is fully discovered, the next best move is always known.
@@ -178,8 +196,7 @@ class Player():
         print(f"[ Debug ][ {self.name} ] Trying to pop from DFS stack the next move...")
         self._move(self.dfs_stack.pop(0))
 
-    def _distance_metric(self, start=None, end=None):
-
+    def _distance_metric(self, start:tuple = None, end:tuple = None):
         if start is None:
             start = (self.pos.x, self.pos.y)
         if end is None:

@@ -1,7 +1,7 @@
 from amazed.modules.maze import Maze
 from amazed.modules.build import DepthFirstSearch
 from amazed.modules.build import Sculptor
-from strategies import Agent
+from strategies import SimpleAgent
 from strategies import Player
 
 import random
@@ -91,12 +91,12 @@ class GameMaster():
 
         # Players settings
         if playerA is None:
-            self.playerA = Agent("PlayerA", body=pygame.Rect((0, 0, self.cell_width//2, self.cell_height//2)), maze=self.maze)
+            self.playerA = SimpleAgent("PlayerA", body=pygame.Rect((0, 0, self.cell_width//2, self.cell_height//2)), maze=self.maze)
         else:
             self.playerA = playerA
         
         if playerB is None:
-            self.playerB = Agent("PlayerB", body=pygame.Rect((0, 0, self.cell_width//2, self.cell_height//2)), maze=self.maze)
+            self.playerB = SimpleAgent("PlayerB", body=pygame.Rect((0, 0, self.cell_width//2, self.cell_height//2)), maze=self.maze)
         else:
             self.playerB = playerB
         
@@ -268,8 +268,9 @@ class GameMaster():
         pygame.display.update()
 
     def _update_game(self):
-        if self.playerA.wants_negotiation() and self.playerB.wants_negotiation():
-            for i in range(3):
+        for i in range(3):
+            if self.playerA.wants_negotiation() and self.playerB.wants_negotiation():
+
                 # print(f"[ Negotiation ] Attempt number {i}:")
                 self.playerA.create_offer()
                 self.playerA.create_request()
@@ -291,6 +292,8 @@ class GameMaster():
                     # print(f"[ Negotiation ] Attempt {i} failed!")
                     pass
 
+            else:
+                break
         # print("[ Negotiation ] The negotiation period ended.")
 
         self.playerA.best_move()
@@ -463,9 +466,9 @@ class GameMaster():
 
 if __name__ == "__main__":
 
-    GENERATIONS = 1
-    CHROMOSOME_LENGTH = 8
-    POP_LENGHT = 4          # Aim for an even number (see crossover)
+    GENERATIONS = 5
+    CHROMOSOME_LENGTH = SimpleAgent.CHROMOSOME_LENGTH
+    POP_LENGHT = 10          # Aim for an even number (see crossover)
     POPULATION = []
 
     MUTATION_CHANCE = 0.4
@@ -480,6 +483,7 @@ if __name__ == "__main__":
                 individual.append("1")
         POPULATION.append(individual)
 
+    scores = None
     for gen in range(1, GENERATIONS+1):
         print("-" * 20)
         print(f"[ GA ] Current generation: {gen:<2}")
@@ -491,25 +495,27 @@ if __name__ == "__main__":
 
                 print(f"[ GA ] Evaluating strategies {i} vs {j}")
 
-                gm = GameMaster(seed=None)
-                gm.playerA.strategy = strategyA
-                gm.playerB.strategy = strategyB
+                gm = GameMaster(seed=gen+i+j)
+                gm.playerA.set_strategy(strategyA)
+                gm.playerB.set_strategy(strategyB)
 
                 gm.run(training=True)
 
-                indexA = "".join(strategyA)
-                indexB = "".join(strategyB)
+                indexA = f"{i}-" + "".join(strategyA)
+                indexB = f"{j}-" + "".join(strategyB)
 
                 if indexA in scores:
-                    scores[indexA] += gm.playerA.score
+                    scores[indexA] += gm.playerA.score / gm.iteration
                 else:
-                    scores[indexA] = gm.playerA.score
+                    scores[indexA] = gm.playerA.score / gm.iteration
                 
                 if indexB in scores:
-                    scores[indexB] += gm.playerB.score
+                    scores[indexB] += gm.playerB.score / gm.iteration
                 else:
-                    scores[indexB] = gm.playerB.score
+                    scores[indexB] = gm.playerB.score / gm.iteration
                 
+                if len(scores.keys()) != POP_LENGHT:
+                    raise RuntimeError(f"Not enough scores {len(scores.keys())}.")
 
                 if gm.state == GameMaster.QUIT:
                     exit()
@@ -577,3 +583,10 @@ if __name__ == "__main__":
         print(*new_pop, sep="\n")
         
         POPULATION = new_pop
+
+
+    best_individual_index = max(scores, key=scores.get)
+    best_individual_score = scores[best_individual_index]
+    best_individual = best_individual_index.split("-")[1]
+    print(f"[ GA ] Best individual strategy: {best_individual}")
+    print(f"[ GA ] Best individual score from last round: {best_individual_score}")
