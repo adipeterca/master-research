@@ -2,17 +2,18 @@ import pygame
 import random
 from amazed.modules.maze import Maze, Vector2D
 from amazed.modules.solver import AStar
-
+import logging
 class Player():
     '''
     Default class which can be inherited to develop strategies
     '''
-    def __init__(self, name, body: pygame.Rect, maze: Maze, start=None, finish=None):
+    def __init__(self, name, maze: Maze, start=None, finish=None):
         if name not in ("PlayerA", "PlayerB"):
             raise ValueError(f"Player name incorrect <{name}>")
         
+        self.logger =  logging.getLogger("GameMaster")
+        
         self.name = name
-        self.body = body
         self.maze = maze
         # self.pos.x = start.x
         # self.pos.y = start.y
@@ -33,11 +34,11 @@ class Player():
 
         # All cells are tuples (x, y), not Vector2D!
         self.dfs_stack = []
-        self._internal_dfs()
+        # self._internal_dfs()
         
         # Recalculate the DFS path every X turns
         self.turn_counter = 0
-        self.turn_recalculate = 15
+        self.turn_recalculate = 25
         
         self.full_discovered = False
         # Used after the maze is fully discovered and the path to the finish can be instantly calculated.
@@ -54,6 +55,7 @@ class Player():
     # def _move(self, next_cell: tuple | Vector2D):
     def _move(self, next_cell: tuple):
         if not isinstance(next_cell, tuple) and not isinstance(next_cell, Vector2D):
+            self.logger.error(f"Invalid type for direction <{next_cell}> provided: {type(next_cell)}", extra={"who": self.name})
             raise TypeError(f"[ {self.name} ] Invalid type for direction <{next_cell}> provided: {type(next_cell)}")
 
         if isinstance(next_cell, tuple):
@@ -61,12 +63,14 @@ class Player():
         
         direction = next_cell - self.pos
         if direction not in (Maze.NORTH, Maze.EAST, Maze.SOUTH, Maze.WEST):
+            self.logger.error(f" You cannot go from current position {self.pos} to the next cell {next_cell}...\nDFS stack: {self.dfs_stack}", extra={"who": self.name})
             raise ValueError(f"[ {self.name} ] You cannot go from current position {self.pos} to the next cell {next_cell}...\nDFS stack: {self.dfs_stack}")
         
         # NICE LOGIC
         # Discover a cell if you are trying to move towards it and you cannot.
         if self.maze.is_wall(self.pos.x, self.pos.y, next_cell.x, next_cell.y):
-            print(f"[ Debug ][ {self.name} ] Hit a wall trying to go from {self.pos} to {next_cell}! Not moving this round...")
+            # print(f"[ Debug ][ {self.name} ] Hit a wall trying to go from {self.pos} to {next_cell}! Not moving this round...")
+            self.logger.debug(f"Hit a wall trying to go from {self.pos} to {next_cell}! Not moving this round...", extra={"who": self.name})
             if self.name == "PlayerA":
                 self.maze.data[next_cell.x][next_cell.y].visibleA = True
             else:
@@ -74,7 +78,9 @@ class Player():
             self._internal_dfs()
             self.turn_counter = 0
         else:
-            print(f"[ Debug ][ {self.name} ] Moving from {self.pos} to {next_cell}")
+            # print(f"[ Debug ][ {self.name} ] Moving from {self.pos} to {next_cell}")
+            self.logger.debug(f"Moving from {self.pos} to {next_cell}", extra={"who": self.name})
+            
             self.pos = next_cell
             self.moved = True
         # END NICE LOGIC
@@ -115,7 +121,8 @@ class Player():
 
     def wants_negotiation(self) -> bool:
         if self.full_discovered:
-            print(f"[ Info ][ {self.name} ] Does not want negociation because the full path to finish is known.\nDFS stack: {self.dfs_stack}")
+            # print(f"[ Info ][ {self.name} ] Does not want negociation because the full path to finish is known.\nDFS stack: {self.dfs_stack}")
+            self.logger.info(f"Does not want negociation because the full path to finish is known.\nDFS stack: {self.dfs_stack}", extra={"who": self.name})
             return False
 
         self.full_discovered = True
@@ -125,7 +132,8 @@ class Player():
                 break
         
         if self.full_discovered:
-            print(f"[ Info ][ {self.name} ] Does not want negociation because the full path to finish is known (for the first time.).\nDFS stack: {self.dfs_stack}")
+            # print(f"[ Info ][ {self.name} ] Does not want negociation because the full path to finish is known (for the first time.).\nDFS stack: {self.dfs_stack}")
+            self.logger.info(f"Does not want negociation because the full path to finish is known.\nDFS stack: {self.dfs_stack}", extra={"who": self.name})
             return False
 
         return True
@@ -149,6 +157,7 @@ class Player():
             x = x_or_tuple
             y = y
         else:
+            self.logger.error(f"Got type <{type(x_or_tuple)}> for x and <{type(y)}> for y. Excepted either a tuple or two ints.", extra={"who": self.name})
             raise TypeError(f"Got type <{type(x_or_tuple)}> for x and <{type(y)}> for y. Excepted either a tuple or two ints.")
 
         if self.name == "PlayerA":
@@ -167,6 +176,7 @@ class Player():
             x = x_or_tuple
             y = y
         else:
+            self.logger.error(f"Got type <{type(x_or_tuple)}> for x and <{type(y)}> for y. Excepted either a tuple or two ints.", extra={"who": self.name})
             raise TypeError(f"Got type <{type(x_or_tuple)}> for x and <{type(y)}> for y. Excepted either a tuple or two ints.")
 
         if self.name == "PlayerA":
@@ -180,7 +190,8 @@ class Player():
             # position = dest - self.pos
             # self._move(position)
             # return
-            print(f"[ Debug ][ {self.name} ] Trying to pop from DFS stack because the path to finish is fully discovered...")
+            # print(f"[ Debug ][ {self.name} ] Trying to pop from DFS stack because the path to finish is fully discovered...")
+            self.logger.debug("Trying to pop from DFS stack because the path to finish is fully discovered...", extra={"who": self.name})
             self._move(self.dfs_stack.pop(0))
             return
 
@@ -193,7 +204,8 @@ class Player():
         else:
             self.turn_counter += 1
         
-        print(f"[ Debug ][ {self.name} ] Trying to pop from DFS stack the next move...")
+        # print(f"[ Debug ][ {self.name} ] Trying to pop from DFS stack the next move...")
+        self.logger.debug("Trying to pop from DFS stack the next move...", extra={"who": self.name})
         self._move(self.dfs_stack.pop(0))
 
     def _distance_metric(self, start:tuple = None, end:tuple = None):
@@ -216,7 +228,8 @@ class Player():
         # How much penalty should taking an unknown cell step add to the total distance
         unknown_penalty = 1.2
 
-        print(f"[ Debug ][ {self.name} ] Recalculating DFS. From current position {self.pos} to finish at {self.finish}")
+        # print(f"[ Debug ][ {self.name} ] Recalculating DFS. From current position {self.pos} to finish at {self.finish}")
+        self.logger.debug(f"Recalculating DFS. From current position {self.pos} to finish at {self.finish}", extra={"who": self.name})
 
         self.dfs_stack.clear()
         self.dfs_stack.append((self.pos.x, self.pos.y))
@@ -224,6 +237,7 @@ class Player():
 
         while self.dfs_stack[-1] != self.finish:
             if len(self.dfs_stack) == 0:
+                self.logger.error(f"Could not find a connected path from {self.start} to {self.finish}!", extra={"who": self.name})
                 raise ValueError(f"[{self.name}] Could not find a connected path from {self.start} to {self.finish}!")
 
             pqueue = []
@@ -282,4 +296,5 @@ class Player():
                 self.dfs_stack.pop()
 
         self.dfs_stack.pop(0)
-        print(f"[ Debug ][ {self.name} ] Recalculated DFS: {self.dfs_stack}")
+        # print(f"[ Debug ][ {self.name} ] Recalculated DFS: {self.dfs_stack}")
+        self.logger.info(f"Recalculated DFS, starting from {self.pos}: {self.dfs_stack}", extra={"who": self.name})

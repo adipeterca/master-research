@@ -1,28 +1,11 @@
-from amazed.modules.maze import Maze
+from both import GameMaster
+from strategies import Human
 
-# from amazed.modules.build import HuntAndKill
-# from amazed.modules.build import DepthFirstSearch
-from amazed.modules.build import RandomKruskal
-# from amazed.modules.build import AldousBroder
-# from amazed.modules.build import RandomCarving
-# from amazed.modules.build import Spiral
+game = GameMaster(seed=None)
+# game.playerA.set_strategy([_ for _ in "0011001111000000100111"])
+game.playerA.set_strategy(strategy=None)
+game.playerB.set_strategy(strategy=None)
 
-# from amazed.modules.solver import DFSHeuristic
-# from amazed.modules.solver import AStar
-from amazed.modules.solver import DFS
-
-m = Maze(10, 10)
-cell_colors = {
-    f"{m.rows//2}, 0" : Maze.START_COLOR,
-    f"{m.rows-1}, 0" : Maze.END_COLOR
-}
-for i in range(m.rows):
-    for j in range(m.columns):
-        m.path(j, i, Maze.SOUTH)
-
-    m.path(m.rows // 2, i, Maze.EAST)
-m.export(output="tmp/maze.png", cell_colors=cell_colors, show=False)
-a = DFS(m, start=(m.rows//2, 0), end=(m.rows-1, 0))
-a.solve()
-a.image("tmp/maze-dfs.png")
-# a.gif("tmp/maze-dfs.gif")
+game.run(rounds=100, training=True)
+print(f"Final score for A: {game.playerA.score}")
+print(f"Final score for B: {game.playerB.score}")

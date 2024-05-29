@@ -4,8 +4,8 @@ from player import *
 
 class CopyPlayer(Player):
     
-    def __init__(self, name, body: Rect, maze: Maze, start=None, finish=None):
-        super().__init__(name, body, maze, start, finish)
+    def __init__(self, name, maze: Maze, start=None, finish=None):
+        super().__init__(name, maze, start, finish)
 
         # (opponent_offer, opponent_request, result)
         self.past_negotiations = []
@@ -63,6 +63,7 @@ class SimpleAgent(Player):
     * 3 bytes represent MOFF (multiplier for offer distance)
     * 3 bytes represent MREQ (multiplier for request distance)
     * 4 bytes represent SCORE_THRESHOLD
+    * 4 bytes represent INITIAL_DFS_EXPLORATION_CHANCE
 
     (req - xoff) = 0 e ce vreau eu
     altfel deviaza de la ce am cerut (nu iau in calcul posibilitatea ca imi ofera ceva "mai bun")
@@ -82,14 +83,14 @@ class SimpleAgent(Player):
 
     curr_score / max_score * 15
 
-    Total length of the chromozome is 8 bytes.
+    Total length of the chromozome is CHROMOSOME_LENGTH bytes.
     Each field is described in detail in the full documentation.
     '''
 
-    CHROMOSOME_LENGTH = 18
+    CHROMOSOME_LENGTH = 22
 
-    def __init__(self, name, body: Rect, maze: Maze, start=None, finish=None):
-        super().__init__(name, body, maze, start, finish)
+    def __init__(self, name, maze: Maze, start=None, finish=None):
+        super().__init__(name, maze, start, finish)
 
         self.strategy = None
         self.opponent_past_offers = []
@@ -112,9 +113,15 @@ class SimpleAgent(Player):
             self.moff = int("".join(self.strategy[8:11]), base=2)
             self.mreq = int("".join(self.strategy[11:14]), base=2)
 
-            self.score_threshold = int("".join(self.strategy[14:]), base=2)
+            self.score_threshold = int("".join(self.strategy[14:18]), base=2)
+
+            # Value between [0, 15], that's why we divide by 15 -> scale it between [0, 1]
+            self.dfs_exploration_chance = int("".join(self.strategy[18:22]), base=2) / 15
+
         except TypeError as e:
             print(e)
+            self.logger.error(e, extra={"who" : self.name})
+            self.logger.error(f"Could not convert strategy <{strategy}> to int in base 2.", extra={"who" : self.name})
             raise RuntimeError(f"Could not convert strategy <{strategy}> to int in base 2.")
 
         max_possible_distance = self._distance_metric((0, 0), (self.maze.rows-1, self.maze.columns-1))
@@ -126,6 +133,7 @@ class SimpleAgent(Player):
         '''
 
         if self.strategy is None:
+            self.logger.error(f"You forgot to set the strategy for me!", extra={"who" : self.name})
             raise RuntimeError(f"[ SimpleAgent ][ {self.name} ] You forgot to set the strategy for me!")
 
         self.request = None
@@ -144,7 +152,7 @@ class SimpleAgent(Player):
             self.request = last_unknown_cell
 
         if self.request is None:
-            print("[ Debug ][ SimpleAgent ][ {self.name} ] I could not find a cell to offer...")
+            self.logger.error(f"I could not find a cell to request...", extra={"who" : self.name})
             raise RuntimeError("how can it be??")
 
         # Just a gimmick and for a better usability
@@ -158,6 +166,7 @@ class SimpleAgent(Player):
         '''
 
         if self.strategy is None:
+            self.logger.error(f"You forgot to set the strategy for me!", extra={"who" : self.name})
             raise RuntimeError(f"[ SimpleAgent ][ {self.name} ] You forgot to set the strategy for me!")
 
         self.offer = None
@@ -198,6 +207,7 @@ class SimpleAgent(Player):
                 self.offer = last_known_cell
 
         if self.offer is None:
+            self.logger.error(f"how??", extra={"who" : self.name})
             raise RuntimeError("how??")
             
         # Just a gimmick for better usability
@@ -206,6 +216,7 @@ class SimpleAgent(Player):
     def proposal(self, offer, request, attempt=0) -> bool:
         
         if self.strategy is None:
+            self.logger.error(f"You forgot to set the strategy for me!", extra={"who" : self.name})
             raise RuntimeError(f"[ SimpleAgent ][ {self.name} ] You forgot to set the strategy for me!")
 
         self.opponent_past_offers.append(offer)
@@ -215,14 +226,181 @@ class SimpleAgent(Player):
                      self._distance_metric(self.offer, request) * self.moff
         
         # Scale it between 0 and 15
-        curr_score_adj = (curr_score / self.max_score) * 15
+        if self.max_score == 0:
+            curr_score_adj = 0
+        else:
+            curr_score_adj = (curr_score / self.max_score) * 15
 
-        print(f"[ SimpleAgent ][ {self.name} ] Proposal scores:")
-        print(f"\t\t\t self.offer : {self.offer}")
-        print(f"\t\t\t opponent.request : {request}")
-        print(f"\t\t\t self.request : {self.request}")
-        print(f"\t\t\t opponent.offer : {offer}")
-        print(f"\t\t\t current score : {curr_score}")
-        print(f"\t\t\t current score adjusted [0, 15] : {curr_score_adj}")
-        print(f"\t\t\t score threshold : {self.score_threshold}")
+        self.logger.info(f"Score for current proposal : {curr_score}", extra={"who" : self.name})
+        self.logger.info(f"Score for current proposal, adjusted between [0, 15] : {curr_score_adj} (must be <= than {self.score_threshold})", extra={"who" : self.name})
+        # print(f"[ SimpleAgent ][ {self.name} ] Proposal scores:")
+        # print(f"\t\t\t self.offer : {self.offer}")
+        # print(f"\t\t\t opponent.request : {request}")
+        # print(f"\t\t\t self.request : {self.request}")
+        # print(f"\t\t\t opponent.offer : {offer}")
+        # print(f"\t\t\t current score : {curr_score}")
+        # print(f"\t\t\t current score adjusted [0, 15] : {curr_score_adj}")
+        # print(f"\t\t\t score threshold : {self.score_threshold}")
         return curr_score_adj <= self.score_threshold
+    
+    def _internal_dfs(self):
+        '''
+        Perform a new DFS each time a cell adjacent to a previous visited cell or a future cell is discovered.\n
+        Use the DFS_EXPLORATION_RATE to sometimes include worse options in the event that they will lead to better outcomes, similar to Simulated Annealing.
+        '''
+
+        # How much penalty should taking an unknown cell step add to the total distance
+        unknown_penalty = 1.2
+
+        # print(f"[ Debug ][ {self.name} ] Recalculating DFS. From current position {self.pos} to finish at {self.finish}")
+        self.logger.debug(f"Recalculating DFS. From current position {self.pos} to finish at {self.finish}", extra={"who": self.name})
+
+        self.dfs_stack.clear()
+        self.dfs_stack.append((self.pos.x, self.pos.y))
+        visited = []
+
+        while self.dfs_stack[-1] != self.finish:
+            if len(self.dfs_stack) == 0:
+                self.logger.error(f"Could not find a connected path from {self.start} to {self.finish}!", extra={"who": self.name})
+                raise ValueError(f"[{self.name}] Could not find a connected path from {self.start} to {self.finish}!")
+
+            pqueue = []
+            (x, y) = self.dfs_stack[-1]
+            visited.append((x, y))
+
+            # North
+            if self.maze.is_valid_position(x-1, y):
+                if not (x-1, y) in visited:
+                    if self.is_visible(x-1, y):
+                        if not self.maze.is_wall(x, y, x-1, y):
+                            distance = self._distance_metric((x-1, y), self.finish)
+                            pqueue.append((x-1, y, distance))
+                    else:
+                        distance = self._distance_metric((x-1, y), self.finish) * unknown_penalty
+                        pqueue.append((x-1, y, distance))
+            
+            # East
+            if self.maze.is_valid_position(x, y+1):
+                if not (x, y+1) in visited:
+                    if self.is_visible(x, y+1):
+                        if not self.maze.is_wall(x, y, x, y+1):
+                            distance = self._distance_metric((x, y+1), self.finish)
+                            pqueue.append((x, y+1, distance))
+                    else:
+                        distance = self._distance_metric((x, y+1), self.finish) * unknown_penalty
+                        pqueue.append((x, y+1, distance))
+            
+            # South
+            if self.maze.is_valid_position(x+1, y):
+                if not (x+1, y) in visited:
+                    if self.is_visible(x+1, y):
+                        if not self.maze.is_wall(x, y, x+1, y):
+                            distance = self._distance_metric((x+1, y), self.finish)
+                            pqueue.append((x+1, y, distance))
+                    else:
+                        distance = self._distance_metric((x+1, y), self.finish) * unknown_penalty
+                        pqueue.append((x+1, y, distance))
+            
+            # West
+            if self.maze.is_valid_position(x, y-1):
+                if not (x, y-1) in visited:
+                    if self.is_visible(x, y-1):
+                        if not self.maze.is_wall(x, y, x, y-1):
+                            distance = self._distance_metric((x, y-1), self.finish)
+                            pqueue.append((x, y-1, distance))
+                    else:
+                        distance = self._distance_metric((x, y-1), self.finish) * unknown_penalty
+                        pqueue.append((x, y-1, distance))
+
+            if len(pqueue) != 0:
+                # Sort the queue based on distance
+                pqueue.sort(key=lambda tup:tup[2])
+
+                index = 0
+                while random.random() <= self.dfs_exploration_chance:
+                    
+                    # This is to avoid selecting a cell that does not exist in the priority queue
+                    if index == len(pqueue) - 1:
+                        break
+
+                    index += 1
+                    self.dfs_exploration_chance *= 0.95
+
+                self.dfs_stack.append((pqueue[index][0], pqueue[index][1]))
+            else:
+                self.dfs_stack.pop()
+
+        self.dfs_stack.pop(0)
+        # print(f"[ Debug ][ {self.name} ] Recalculated DFS: {self.dfs_stack}")
+        self.logger.info(f"Recalculated DFS, starting from {self.pos}: {self.dfs_stack}", extra={"who": self.name})
+
+class Human(Player):
+
+    def __init__(self, name, maze: Maze, start=None, finish=None):
+        super().__init__(name, maze, start, finish)
+
+    def create_offer(self):
+        print(f"[ Human ] Create offer:")
+        while True:
+            row = input(f"row (between [0, {self.maze.rows-1}]) = ")
+            try:
+                row = int(row)
+            except:
+                print(f"[ Error ] Provide an integer in base 10. You provided {row} as {type(row)}")
+                continue
+            
+            column = input(f"column (between [0, {self.maze.columns-1}]) = ")
+            try:
+                column = int(column)
+            except:
+                print(f"[ Error ] Provide an integer in base 10. You provided {column} as {type(column)}")
+                continue
+            
+            proceed = input(f"Selected ({row}, {column}) as an offer. Proceed? (y/n) ")
+            if proceed.lower()[0] == "y":
+                break
+        print(f"Set offer to ({row}, {column}).")
+        self.offer = (row, column)
+
+        return self.offer
+
+    def create_request(self):
+        print(f"[ Human ] Create request:")
+        while True:
+            row = input(f"row (between [0, {self.maze.rows-1}]) = ")
+            try:
+                row = int(row)
+            except:
+                print(f"[ Error ] Provide an integer in base 10. You provided {row} as {type(row)}")
+                continue
+            
+            column = input(f"column (between [0, {self.maze.columns-1}]) = ")
+            try:
+                column = int(column)
+            except:
+                print(f"[ Error ] Provide an integer in base 10. You provided {column} as {type(column)}")
+                continue
+            
+            proceed = input(f"Selected ({row}, {column}) as an request. Proceed? (y/n) ")
+            if proceed.lower()[0] == "y":
+                break
+        print(f"Set request to ({row}, {column}).")
+        self.request = (row, column)
+
+        return self.request
+
+    def proposal(self, offer, request, attempt=0) -> bool:
+        print(f"[ Human ] Attempted proposal number {attempt} :")
+
+        print(f"My request: {self.request}")
+        print(f"Opponent's offer: {offer}\n")
+        print(f"My offer: {self.offer}")
+        print(f"Opponent's request: {request}\n\n")
+
+        proceed = input("Proceed? (y/n) ")
+        if proceed[0].lower() != "y":
+            print(f"Proposal refused!")
+            return False
+        
+        print(f"Proposal accepted!")
+        return True

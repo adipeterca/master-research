@@ -1,0 +1,20 @@
+Batch 1:
+-> foarte multi agenti converg spre un endless loop pentru ca nu mai accepta trade-uri, iar DFS-ul nu mai exploreaza
+-> idee de valoare noua: la cate loop-uri sa se recalculeze DFS-ul (totusi, stiu sigur ca valori sub 10 dau rezultate foarte proaste)
+-> idee de valoare noua: care e sansa ca DFS sa aleaga o cale "mai proasta"
+
+Batch 2:
+-> am pus un DFS_EXPLORATION_CHANCE care poate selecta si o celula mai "slaba" (functioneaza ca SA)
+-> am crescut `self.turn_recalculate` la 25.
+
+Batch 3:
+-> fixat un bug in roullete wheel selection
+
+Batch 4:
+-> se vede un improvement
+
+Batch 5:
+-> strategy: 0011001111000000100111, score 2.782940819483861
+-> mutation chance 0.2
+-> crossover chance 0.9
+-> Dupa testare, nu pare un individ foarte bun, foarte putin peste random. Incerc o antrenare mai lunga.

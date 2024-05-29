@@ -7,6 +7,8 @@ from strategies import Player
 import random
 import pygame
 import pygame.freetype
+import logging
+from datetime import datetime
 
 from threading import Thread
 
@@ -67,6 +69,13 @@ class GameMaster():
 
         self.maze = Maze(10, 10, self.GameCell)
 
+        # Logging settings
+        self.logger = logging.getLogger("GameMaster")
+        self.logger.setLevel(logging.INFO)
+        file_handler = logging.FileHandler(datetime.now().strftime(f"game_logs/gamemaster-%H-%M-%S-%f.log"))
+        file_handler.setFormatter(logging.Formatter("[ %(levelname)s ][ %(who)s ] %(message)s"))
+        self.logger.addHandler(file_handler)
+
         # General settings
         pygame.init()
         self.screen = pygame.display.set_mode((self.SCREEN_WIDTH, self.SCREEN_HEIGHT))
@@ -91,14 +100,19 @@ class GameMaster():
 
         # Players settings
         if playerA is None:
-            self.playerA = SimpleAgent("PlayerA", body=pygame.Rect((0, 0, self.cell_width//2, self.cell_height//2)), maze=self.maze)
+            self.playerA = SimpleAgent("PlayerA", maze=self.maze)
         else:
             self.playerA = playerA
         
         if playerB is None:
-            self.playerB = SimpleAgent("PlayerB", body=pygame.Rect((0, 0, self.cell_width//2, self.cell_height//2)), maze=self.maze)
+            self.playerB = SimpleAgent("PlayerB", maze=self.maze)
         else:
             self.playerB = playerB
+
+        # We need two separate models because we will modify each one respectively
+        # and the update function is called only once.
+        self.playerAModel = pygame.Rect((0, 0, self.cell_width//2, self.cell_height//2))
+        self.playerBModel = pygame.Rect((0, 0, self.cell_width//2, self.cell_height//2))
         
         self.finishA = pygame.Rect((0, 0, self.cell_width // 4, self.cell_height // 4))
         self.finishB = pygame.Rect((0, 0, self.cell_width // 4, self.cell_height // 4))
@@ -148,7 +162,8 @@ class GameMaster():
                         self.cell_colors_a[f"{i}, {j}"] = self.VIEW_A
                         self.cell_colors_b[f"{i}, {j}"] = self.UNKNOWN
                 if self.maze.data[i][j].visibleA and self.maze.data[i][j].visibleB:
-                    print(f"Marked cell {i}, {j} as visible to both.")
+                    # print(f"Marked cell {i}, {j} as visible to both.")
+                    self.logger.debug(f"Marked cell {i}, {j} as visible to both.", extra={"who": "GameMaster"})
 
         self.playerA.maze = self.maze
         self.playerB.maze = self.maze
@@ -166,7 +181,8 @@ class GameMaster():
         finish_B = start_A
         # # #
 
-        print(f"[ Debug ][ GameMaster ] Set new start/finish positions for both players.\n\t\tPlayerA.start = {start_A}, PlayerA.finish = {finish_A}\n\t\tPlayerB.start = {start_B}, PlayerB.finish = {finish_B}")
+        # print(f"[ Debug ][ GameMaster ] Set new start/finish positions for both players.\n\t\tPlayerA.start = {start_A}, PlayerA.finish = {finish_A}\n\t\tPlayerB.start = {start_B}, PlayerB.finish = {finish_B}")
+        self.logger.info(f"Set new start/finish positions for both players.\n\t\tPlayerA.start = {start_A}, PlayerA.finish = {finish_A}\n\t\tPlayerB.start = {start_B}, PlayerB.finish = {finish_B}", extra={"who": "GameMaster"})
         self.playerA.start = start_A
         self.playerA.finish = finish_A
         self.playerA.reset_position()
@@ -174,23 +190,6 @@ class GameMaster():
         self.playerB.start = start_B
         self.playerB.finish = finish_B
         self.playerB.reset_position()
-
-    def view_a(self):
-        self.maze.export(output="tmp/playerA.png", show=False, cell_colors=self.cell_colors_a)
-
-    def view_b(self):
-        self.maze.export(output="tmp/playerB.png", show=False, cell_colors=self.cell_colors_b)
-
-    def view_all(self):
-        all_cell_colors = self.cell_colors_a
-        for key in self.cell_colors_b.keys():
-            if all_cell_colors[key] == self.UNKNOWN:
-                all_cell_colors[key] = self.VIEW_B
-
-        all_cell_colors["0, 0"] = self.PLAYER_A
-        all_cell_colors["9, 9"] = self.PLAYER_B
-
-        self.maze.export(output="tmp/all.png", show=False, cell_colors=all_cell_colors)
 
     def _draw_screen(self):
         self.screen.fill((255, 255, 255))
@@ -233,13 +232,13 @@ class GameMaster():
         self.finishB.left = self.board_bk.left + self.playerB.finish[1]*self.board_cell.width + (self.playerB.finish[1]+1)*self.wall_gap + self.cell_height * 0.4
         pygame.draw.rect(self.screen, self.FINISH_B, self.finishB)
 
-        self.playerA.body.top = self.board_bk.top + self.playerA.pos.x*self.board_cell.height + (self.playerA.pos.x+1)*self.wall_gap + self.cell_height * 0.25
-        self.playerA.body.left = self.board_bk.left + self.playerA.pos.y*self.board_cell.width + (self.playerA.pos.y+1)*self.wall_gap + self.cell_width * 0.25
-        pygame.draw.rect(self.screen, self.PLAYER_A, self.playerA.body)
+        self.playerAModel.top = self.board_bk.top + self.playerA.pos.x*self.board_cell.height + (self.playerA.pos.x+1)*self.wall_gap + self.cell_height * 0.25
+        self.playerAModel.left = self.board_bk.left + self.playerA.pos.y*self.board_cell.width + (self.playerA.pos.y+1)*self.wall_gap + self.cell_width * 0.25
+        pygame.draw.rect(self.screen, self.PLAYER_A, self.playerAModel)
 
-        self.playerB.body.top = self.board_bk.top + self.playerB.pos.x*self.board_cell.height + (self.playerB.pos.x+1)*self.wall_gap + self.cell_height * 0.25
-        self.playerB.body.left = self.board_bk.left + self.playerB.pos.y*self.board_cell.width + (self.playerB.pos.y+1)*self.wall_gap + self.cell_width * 0.25
-        pygame.draw.rect(self.screen, self.PLAYER_B, self.playerB.body)
+        self.playerBModel.top = self.board_bk.top + self.playerB.pos.x*self.board_cell.height + (self.playerB.pos.x+1)*self.wall_gap + self.cell_height * 0.25
+        self.playerBModel.left = self.board_bk.left + self.playerB.pos.y*self.board_cell.width + (self.playerB.pos.y+1)*self.wall_gap + self.cell_width * 0.25
+        pygame.draw.rect(self.screen, self.PLAYER_B, self.playerBModel)
 
         if self.buttonLoop.enabled:
             pygame.draw.rect(self.screen, self.buttonLoop.colorEnabled, self.buttonLoop.body)
@@ -272,6 +271,9 @@ class GameMaster():
             if self.playerA.wants_negotiation() and self.playerB.wants_negotiation():
 
                 # print(f"[ Negotiation ] Attempt number {i}:")
+                self.logger.info(f"Attempt number {i}:", extra={"who": "Negotiation"})
+
+                
                 self.playerA.create_offer()
                 self.playerA.create_request()
 
@@ -279,10 +281,13 @@ class GameMaster():
                 self.playerB.create_request()
 
                 # print(f"[ Negotiation ] A proposal is: \n\tOFFER {self.playerA.offer}\n\tREQUEST {self.playerA.request}")
+                self.logger.info(f"A proposal is: \n\tOFFER {self.playerA.offer}\n\tREQUEST {self.playerA.request}", extra={"who": "Negotiation"})
                 # print(f"[ Negotiation ] B proposal is: \n\tOFFER {self.playerB.offer}\n\tREQUEST {self.playerB.request}")
+                self.logger.info(f"B proposal is: \n\tOFFER {self.playerB.offer}\n\tREQUEST {self.playerB.request}", extra={"who": "Negotiation"})
 
                 if self.playerA.proposal(self.playerB.offer, self.playerB.request, i) and self.playerB.proposal(self.playerA.offer, self.playerA.request, i):
                     # print(f"[ Negotiation ] Succes!")
+                    self.logger.info("Succes!", extra={"who": "Negotiation"})
 
                     self.maze.data[self.playerB.offer[0]][self.playerB.offer[1]].visibleA = True
                     self.maze.data[self.playerA.offer[0]][self.playerA.offer[1]].visibleB = True
@@ -290,7 +295,7 @@ class GameMaster():
                     break
                 else:
                     # print(f"[ Negotiation ] Attempt {i} failed!")
-                    pass
+                    self.logger.info(f"Attempt {i} failed!", extra={"who": "Negotiation"})
 
             else:
                 break
@@ -304,17 +309,20 @@ class GameMaster():
 
         if self.playerA.win() and self.playerB.win():
             self.state = self.DRAW
-            print("[ Debug ] Draw.")
+            # print("[ Debug ] Draw.")
+            self.logger.info("The game finished in a draw.", extra={"who": "GameMaster"})
 
         elif self.playerA.win():
             self.state = self.WIN_A
             self.playerA.score += 1
-            print("[ Debug ] A won.")
+            # print("[ Debug ] A won.")
+            self.logger.info("A won the game.", extra={"who": "GameMaster"})
 
         elif self.playerB.win():
             self.state = self.WIN_B
             self.playerB.score += 1
-            print("[ Debug ] B won.")
+            # print("[ Debug ] B won.")
+            self.logger.info("B won the game.", extra={"who": "GameMaster"})
         
         elif self.state == self.QUIT: 
             return
@@ -323,6 +331,11 @@ class GameMaster():
             self.state = self.RUNNING
         
         self.iteration += 1
+
+        if self.iteration >= 500:
+            # print("[ Info ][ GameMaster ] Iteration count over 500. Marking the game as a draw.")
+            self.logger.info("Iteration count over 500. Marking the game as a draw.", extra={"who": "GameMaster"})
+            self.state = self.DRAW
 
     def _draw_results(self):
 
@@ -353,15 +366,18 @@ class GameMaster():
             self.state = self.RUNNING
             self.iteration = 0
 
-            print(f"[ Debug ][ PlayerA ] Start from {self.playerA.start} and finish at {self.playerA.finish}.")
-            print(f"[ Debug ][ PlayerB ] Start from {self.playerB.start} and finish at {self.playerB.finish}.")
+            self.logger.info(f"Starting round {round}...", extra={"who": "GameMaster"})
+
             
             # Reset players & maze for a new game iteration.
             self._create_maze()
             self._create_start_finish()
 
-            print(f"[ Debug ][ PlayerA ] (after recalculation) Start from {self.playerA.start} and finish at {self.playerA.finish}.")
-            print(f"[ Debug ][ PlayerB ] (after recalculation) Start from {self.playerB.start} and finish at {self.playerB.finish}.")
+            # print(f"[ Debug ][ PlayerA ] (after recalculation) Start from {self.playerA.start} and finish at {self.playerA.finish}.")
+            self.logger.debug(f"(after recalculation) Start from {self.playerA.start} and finish at {self.playerA.finish}.", extra={"who": "PlayerA"})
+
+            # print(f"[ Debug ][ PlayerB ] (after recalculation) Start from {self.playerB.start} and finish at {self.playerB.finish}.")
+            self.logger.debug(f"(after recalculation) Start from {self.playerB.start} and finish at {self.playerB.finish}.", extra={"who": "PlayerB"})
 
             # Both players know where they start from
             self.maze.data[self.playerA.pos.x][self.playerA.pos.y].visibleA = True
@@ -456,137 +472,11 @@ class GameMaster():
             if len(self.results) == rounds:
                 game_thread.join()
                 pygame.quit()
-                print("[ Debug ] Training finished, the application closed normally.")
+                print("[ GameMaster ] Training finished, the application closed normally.")
+                self.logger.info("Training finished, the application closed normally.", extra={"who": "GameMaster"})
                 return
         
         game_thread.join()
         pygame.quit()
-        print("[ Debug ] The application was closed by the user.")
-
-
-if __name__ == "__main__":
-
-    GENERATIONS = 5
-    CHROMOSOME_LENGTH = SimpleAgent.CHROMOSOME_LENGTH
-    POP_LENGHT = 10          # Aim for an even number (see crossover)
-    POPULATION = []
-
-    MUTATION_CHANCE = 0.4
-    CROSSOVER_CHANCE = 0.8
-
-    for i in range(POP_LENGHT):
-        individual = []
-        for ii in range(CHROMOSOME_LENGTH):
-            if random.random() >= 0.5:
-                individual.append("0")
-            else:
-                individual.append("1")
-        POPULATION.append(individual)
-
-    scores = None
-    for gen in range(1, GENERATIONS+1):
-        print("-" * 20)
-        print(f"[ GA ] Current generation: {gen:<2}")
-
-        scores = {}
-
-        for i, strategyA in enumerate(POPULATION):
-            for j, strategyB in enumerate(POPULATION):
-
-                print(f"[ GA ] Evaluating strategies {i} vs {j}")
-
-                gm = GameMaster(seed=gen+i+j)
-                gm.playerA.set_strategy(strategyA)
-                gm.playerB.set_strategy(strategyB)
-
-                gm.run(training=True)
-
-                indexA = f"{i}-" + "".join(strategyA)
-                indexB = f"{j}-" + "".join(strategyB)
-
-                if indexA in scores:
-                    scores[indexA] += gm.playerA.score / gm.iteration
-                else:
-                    scores[indexA] = gm.playerA.score / gm.iteration
-                
-                if indexB in scores:
-                    scores[indexB] += gm.playerB.score / gm.iteration
-                else:
-                    scores[indexB] = gm.playerB.score / gm.iteration
-                
-                if len(scores.keys()) != POP_LENGHT:
-                    raise RuntimeError(f"Not enough scores {len(scores.keys())}.")
-
-                if gm.state == GameMaster.QUIT:
-                    exit()
-
-                for e, state in enumerate(gm.results):
-                    if state == GameMaster.WIN_A:
-                        print(f"[ GA ][ Round {e+1:<2} ] A won.")
-                    elif state == GameMaster.WIN_B:
-                        print(f"[ GA ][ Round {e+1:<2} ] B won.")
-                    elif state == GameMaster.DRAW:
-                        print(f"[ GA ][ Round {e+1:<2} ] Draw.")
-                    else:
-                        raise ValueError(f"What kind of state <{type(state)}> with value <{state}> did you append in round {e}?")
-                    
-        # sorted_scores = dict(sorted(scores.items(), key=lambda item: item[1]))
-        print("[ GA ] Scores:")
-        for key, value in scores.items():
-            print(f"{key}: {value}")
-
-        total_fitness = sum(scores.values())
-        probabilities = [f / total_fitness for f in scores.values()]
-
-        cumulative_probabilities = []
-        cumulative_sum = 0
-        for p in probabilities:
-            cumulative_sum += p
-            cumulative_probabilities.append(cumulative_sum)
-
-        # Selection using roulette wheel
-        new_pop = []
-        for i in range(POP_LENGHT):
-            spin = random.random()
-            for j in range(0, len(cumulative_probabilities) - 1):
-                if spin < cumulative_probabilities[j]:
-                    new_pop.append(POPULATION[j])
-
-        print("[ GA ] New population:")
-        print(*new_pop, sep="\n")
-
-        # Crossover
-        for i in range(0, POP_LENGHT, 2):
-            if random.random() < CROSSOVER_CHANCE:
-                crossover_point = CHROMOSOME_LENGTH // 2
-
-                x = new_pop[i][:crossover_point] + new_pop[i+1][crossover_point:]
-                y = new_pop[i+1][:crossover_point] + new_pop[i][crossover_point:]
-
-                new_pop[i] = x
-                new_pop[i+1] = y
-        
-        print("[ GA ] New population (after crossover):")
-        print(*new_pop, sep="\n")
-
-        for i in range(POP_LENGHT):
-            for j in range(CHROMOSOME_LENGTH):
-                if random.random() < MUTATION_CHANCE:
-                    if new_pop[i][j] == "0":
-                        new_pop[i][j] = "1"
-                    elif new_pop[i][j] == "1":
-                        new_pop[i][j] = "0"
-                    else:
-                        raise ValueError(f"[ GA ] What :keklmao: {new_pop[i][j]}")
-                    
-        print("[ GA ] New population (after mutation):")
-        print(*new_pop, sep="\n")
-        
-        POPULATION = new_pop
-
-
-    best_individual_index = max(scores, key=scores.get)
-    best_individual_score = scores[best_individual_index]
-    best_individual = best_individual_index.split("-")[1]
-    print(f"[ GA ] Best individual strategy: {best_individual}")
-    print(f"[ GA ] Best individual score from last round: {best_individual_score}")
+        print("[ GameMaster ] The application was closed by the user.")
+        self.logger.info("The application was closed by the user.", extra={"who": "GameMaster"})
