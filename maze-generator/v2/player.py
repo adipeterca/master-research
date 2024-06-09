@@ -3,6 +3,7 @@ import random
 from amazed.modules.maze import Maze, Vector2D
 from amazed.modules.solver import AStar
 import logging
+
 class Player():
     '''
     Default class which can be inherited to develop strategies

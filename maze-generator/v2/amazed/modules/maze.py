@@ -13,6 +13,9 @@ class Vector2D():
             self.x = x_or_pair
             self.y = y
 
+    def to_tuple(self) -> tuple:
+        return (self.x, self.y)
+
     def __add__(self, other):
         new_x = self.x + other.x
         new_y = self.y + other.y
@@ -68,6 +71,9 @@ class Maze:
     VISITED_CELL_COLOR = (200, 250, 200)
 
     class Cell:
+        '''
+        Default class for maze cells.
+        '''
         def __init__(self):
             self.walls = {
                 Maze.NORTH : True,
@@ -75,10 +81,21 @@ class Maze:
                 Maze.SOUTH : True,
                 Maze.WEST : True
             }
+            self.active = True
+
+        def get_walls(self):
+            walls = ""
+            if self.walls[Maze.NORTH]: walls += "1"
+            if self.walls[Maze.EAST]: walls += "1"
+            if self.walls[Maze.SOUTH]: walls += "1"
+            if self.walls[Maze.WEST]: walls += "1"
+
+            return walls
+        
         def __str__(self):
             return 'Cell '
 
-    def __init__(self, rows=4, columns=4, constructor=Cell):
+    def __init__(self, rows:int=4, columns:int=4, constructor:Cell=Cell):
         '''
         Constructs a maze according to the number of rows/columns provided.
         '''
@@ -93,7 +110,9 @@ class Maze:
         self.columns = columns
         self.cell_type = constructor
         self.no_cells = rows * columns
-        self.no_walls = rows + columns + 2 * rows * columns
+
+        # Number of all walls (both external and internal)
+        self.no_walls = rows * (columns - 1) + columns * (rows - 1) + (rows * 2 + columns * 2)
 
     def reset(self):
         self.data.clear()
@@ -111,7 +130,7 @@ class Maze:
         if direction not in [Maze.NORTH, Maze.EAST, Maze.SOUTH, Maze.WEST]:
             raise ValueError(f'Incorrect value provided for direction: {direction}\n')
         if not self.is_valid_position(x, y):
-            raise ValueError(f'Incorrect values for x or/and y: ({x}, {y}). They must be between [0, {self.size})\n')
+            raise ValueError(f'Incorrect values for x or/and y: ({x}, {y}). They must be between [0, {self.rows}])\n')
 
         try:
             if direction == Maze.NORTH:
@@ -124,6 +143,32 @@ class Maze:
                 self.data[x][y-1].walls[Maze.EAST] = False
             self.data[x][y].walls[direction] = False
             self.no_walls -= 1
+            return True
+        except:
+            return False
+    
+    def wall(self, x, y, direction):
+        '''
+        Similar to self.path()
+        Add the wall in direction @direction corresponding to cell at positions @x, @y.\n
+        Returns @True on success, @False on failure (incorrect wall adding).
+        '''
+        if direction not in [Maze.NORTH, Maze.EAST, Maze.SOUTH, Maze.WEST]:
+            raise ValueError(f'[wall] Incorrect value provided for direction: {direction}\n')
+        if not self.is_valid_position(x, y):
+            raise ValueError(f'[wall] Incorrect values for x or/and y: ({x}, {y}). They must be between [0, {self.rows}])\n')
+
+        try:
+            if direction == Maze.NORTH:
+                self.data[x-1][y].walls[Maze.SOUTH] = True
+            elif direction == Maze.EAST:
+                self.data[x][y+1].walls[Maze.WEST] = True
+            if direction == Maze.SOUTH:
+                self.data[x+1][y].walls[Maze.NORTH] = True
+            if direction == Maze.WEST:
+                self.data[x][y-1].walls[Maze.EAST] = True
+            self.data[x][y].walls[direction] = True
+            self.no_walls += 1
             return True
         except:
             return False
@@ -178,7 +223,7 @@ class Maze:
         return None if len(possible_actions) == 0 else possible_actions
 
     def is_valid_position(self, x, y):
-        return x >= 0 and y >= 0 and x < self.rows and y < self.columns
+        return x >= 0 and y >= 0 and x < self.rows and y < self.columns and self.data[x][y].active
     
     def is_wall(self, x1, y1, x2, y2):
         '''
@@ -247,7 +292,49 @@ class Maze:
                         self.no_walls += 1
 
 
-    def export(self, distance=10, output=None, show=True, cell_colors=None, checkers=True):
+    def get_wall_bitstring(self):
+        '''
+        First map all vertical walls, then horizontal. Only internal walls are checked.
+        '''
+        idv = []
+        for i in range(self.rows):
+            for j in range(self.columns - 1):
+                if self.data[i][j].walls[Maze.EAST]:
+                    idv.append("1")
+                else:
+                    idv.append("0")
+        
+        for i in range(self.rows - 1):
+            for j in range(self.columns):
+                if self.data[i][j].walls[Maze.SOUTH]:
+                    idv.append("1")
+                else:
+                    idv.append("0")
+        return idv
+
+    def set_wall_bitstring(self, idv: list | str):
+        '''
+        First construct vertical mazes, then horizontal. \n
+        The maze needs to be reseted first.
+        '''
+        if (len(idv) == 0):
+            return None
+        if isinstance(idv, str):
+            idv = [_ for _ in idv]
+        counter = 0
+        for i in range(self.rows):
+            for j in range(self.columns - 1):
+                if idv[counter] == "0":
+                    self.path(i, j, Maze.EAST)
+                counter += 1
+        for i in range(self.rows - 1):
+            for j in range(self.columns):
+                if idv[counter] == "0":
+                    self.path(i, j, Maze.SOUTH)
+                counter += 1
+
+
+    def export(self, distance:int=10, output:str=None, show:bool=True, cell_colors:dict=None, checkers:bool=True):
         """
         Exports the maze to an image.
         @distance: the distance of each cell
@@ -257,10 +344,10 @@ class Maze:
                     {
                         "{row}, {column}" : (red, green, blue)
                     }
-                    By default, all cells are colored with DEFAULT_COLOR, except for the start (START_COLOR) and end (END_COLOR).
+                    By default, all cells are colored with DEFAULT_COLOR.
         @checkers: default background color will change to a checkers pattern.
         """
-        new_data = np.zeros((self.rows * distance, self.columns * distance, 3), dtype=np.uint8)
+        new_data = np.zeros((self.rows * distance + 1, self.columns * distance + 1, 3), dtype=np.uint8)
 
         # Setting default values
         if cell_colors is None:
@@ -311,68 +398,16 @@ class Maze:
                         new_data[i*distance][j*distance+k][0] = self.WALL_COLOR[0]
                         new_data[i*distance][j*distance+k][1] = self.WALL_COLOR[1]
                         new_data[i*distance][j*distance+k][2] = self.WALL_COLOR[2]
-
-        img = Image.fromarray(new_data)
-        if output is not None and type(output) is str:
-            img.save(output)
-        if show:
-            img.show()
-
-        return img
-
-
-
-    def export_old(self, distance = 10, output = None, show=True, current_cell=None, visited_cells=None):
-        '''
-        DEPRECATED!
-        Exports the maze to an image.
-        @distance: the distance of each cell
-        @output: path to file
-        @show: display the final result
-        @current_cell: if set, it will color with red the current cell. Used for GIF creation. MUST BE A set() OBJECT
-                        IF SET as a list, it will color ALL CELLS in the list with red.
-        @visited_cells: if set, it will color any cell from the visited_cells set() object. Used for GIF creation.
-        '''
-        new_data = np.zeros((self.rows * distance, self.columns * distance, 3), dtype=np.uint8)
-
+        
+        # Add the EAST and SOUTH border
         for i in range(self.rows):
-            for j in range(self.columns):
-
-                if (current_cell != None and current_cell == (i, j)) or (type(current_cell) == list and (i, j) in current_cell):
-                    for k1 in range(distance):
-                        for k2 in range(distance):
-                            new_data[i*distance+k1][j*distance+k2][0] = 255
-                            new_data[i*distance+k1][j*distance+k2][1] = 0
-                            new_data[i*distance+k1][j*distance+k2][2] = 0
-
-                elif visited_cells != None and (i, j) in visited_cells:
-                    for k1 in range(distance):
-                        for k2 in range(distance):
-                            new_data[i*distance+k1][j*distance+k2][0] = 0
-                            new_data[i*distance+k1][j*distance+k2][1] = 255
-                            new_data[i*distance+k1][j*distance+k2][2] = 0
-                else:
-                    for k1 in range(distance):
-                        for k2 in range(distance):
-                            new_data[i*distance+k1][j*distance+k2][0] = 255
-                            new_data[i*distance+k1][j*distance+k2][1] = 255
-                            new_data[i*distance+k1][j*distance+k2][2] = 255
-                
-                # West wall
-                # For east wall, it should be j*distance+(distance-1)
-                if self.data[i][j].walls[Maze.WEST]:
-                    for k in range(distance):
-                        new_data[i*distance+k][j*distance][0] = 0
-                        new_data[i*distance+k][j*distance][1] = 0
-                        new_data[i*distance+k][j*distance][2] = 0
-                
-                # North wall
-                # For south wall, it should be i*distance+(distance-1)
-                if self.data[i][j].walls[Maze.NORTH]:
-                    for k in range(distance):
-                        new_data[i*distance][j*distance+k][0] = 0
-                        new_data[i*distance][j*distance+k][1] = 0
-                        new_data[i*distance][j*distance+k][2] = 0
+            new_data[i][-1][0] = self.WALL_COLOR[0]
+            new_data[i][-1][1] = self.WALL_COLOR[1]
+            new_data[i][-1][2] = self.WALL_COLOR[2]
+        for i in range(self.columns):
+            new_data[-1][i][0] = self.WALL_COLOR[0]
+            new_data[-1][i][1] = self.WALL_COLOR[1]
+            new_data[-1][i][2] = self.WALL_COLOR[2]
 
         img = Image.fromarray(new_data)
         if output is not None and type(output) is str:

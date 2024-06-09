@@ -8,7 +8,6 @@ import random
 import pygame
 import pygame.freetype
 import logging
-from datetime import datetime
 
 from threading import Thread
 
@@ -37,7 +36,7 @@ class GameMaster():
     FINISH_B = (255, 91, 185)
 
     UNKNOWN = (50, 50, 50)
-    VIEW_ALL = (200, 200, 200)
+    VIEW_ALL = (180, 180, 180)
     VIEW_HIDDEN = (15, 15, 15)
 
     # GameStates
@@ -71,8 +70,8 @@ class GameMaster():
 
         # Logging settings
         self.logger = logging.getLogger("GameMaster")
-        self.logger.setLevel(logging.INFO)
-        file_handler = logging.FileHandler(datetime.now().strftime(f"game_logs/gamemaster-%H-%M-%S-%f.log"))
+        self.logger.setLevel(logging.DEBUG)
+        file_handler = logging.FileHandler("gamemaster.log", mode="w")
         file_handler.setFormatter(logging.Formatter("[ %(levelname)s ][ %(who)s ] %(message)s"))
         self.logger.addHandler(file_handler)
 
@@ -117,7 +116,24 @@ class GameMaster():
         self.finishA = pygame.Rect((0, 0, self.cell_width // 4, self.cell_height // 4))
         self.finishB = pygame.Rect((0, 0, self.cell_width // 4, self.cell_height // 4))
 
-        self.state = self.NONE
+        self.set_state(self.NONE)
+
+    def set_state(self, new_state):
+        '''
+        Use this to avoid overriding states from multiple threads.
+        '''
+        if new_state == self.NONE:
+            self.state = self.NONE
+            self.logger.info(f"State reset!", extra={"who":"GameMaster"})
+            return
+
+        # Do not update the state in this situation
+        if self.state in (self.WIN_A, self.WIN_B, self.DRAW, self.QUIT, self.USER_QUIT):
+            self.logger.info(f"Could not update the state from {self.state} to {new_state} because of stuff.", extra={"who":"GameMaster"})
+            return
+
+        self.logger.debug(f"Changed state {self.state} to {new_state}", extra={"who":"GameMaster"})
+        self.state = new_state
 
     def _create_maze(self):
         '''
@@ -127,43 +143,35 @@ class GameMaster():
         self._maze_algorithm_class(self.maze, seed=self._seed, gif=False)
         # DepthFirstSearch(self.maze, gif=False)
 
-        playerA_count = 0
-        playerB_count = 0
+        # playerA_count = 0
+        # playerB_count = 0
 
         # Randomly distribute each player a set of cells
-        self.cell_colors_a = {}
-        self.cell_colors_b = {}
         for i in range(self.maze.rows):
             for j in range(self.maze.columns):
-                if random.random() > 0.5:
-                    if playerA_count < self.maze.rows * self.maze.columns / 2:
-                        self.maze.data[i][j].visibleA = True
-                        self.maze.data[i][j].visibleB = False
-                        playerA_count += 1
-                        self.cell_colors_a[f"{i}, {j}"] = self.VIEW_A
-                        self.cell_colors_b[f"{i}, {j}"] = self.UNKNOWN
-                    else:
-                        self.maze.data[i][j].visibleA = False
-                        self.maze.data[i][j].visibleB = True
-                        playerB_count += 1
-                        self.cell_colors_b[f"{i}, {j}"] = self.VIEW_B
-                        self.cell_colors_a[f"{i}, {j}"] = self.UNKNOWN
-                else:
-                    if playerB_count < self.maze.rows * self.maze.columns / 2:
-                        self.maze.data[i][j].visibleA = False
-                        self.maze.data[i][j].visibleB = True
-                        playerB_count += 1
-                        self.cell_colors_b[f"{i}, {j}"] = self.VIEW_B
-                        self.cell_colors_a[f"{i}, {j}"] = self.UNKNOWN
-                    else:
-                        self.maze.data[i][j].visibleA = True
-                        self.maze.data[i][j].visibleB = False
-                        playerA_count += 1
-                        self.cell_colors_a[f"{i}, {j}"] = self.VIEW_A
-                        self.cell_colors_b[f"{i}, {j}"] = self.UNKNOWN
-                if self.maze.data[i][j].visibleA and self.maze.data[i][j].visibleB:
-                    # print(f"Marked cell {i}, {j} as visible to both.")
-                    self.logger.debug(f"Marked cell {i}, {j} as visible to both.", extra={"who": "GameMaster"})
+                self.maze.data[i][j].visibleA = False
+                self.maze.data[i][j].visibleB = False
+                # if random.random() > 0.5:
+                #     if playerA_count < self.maze.rows * self.maze.columns / 2:
+                #         self.maze.data[i][j].visibleA = True
+                #         self.maze.data[i][j].visibleB = False
+                #         playerA_count += 1
+                #     else:
+                #         self.maze.data[i][j].visibleA = False
+                #         self.maze.data[i][j].visibleB = True
+                #         playerB_count += 1
+                # else:
+                #     if playerB_count < self.maze.rows * self.maze.columns / 2:
+                #         self.maze.data[i][j].visibleA = False
+                #         self.maze.data[i][j].visibleB = True
+                #         playerB_count += 1
+                #     else:
+                #         self.maze.data[i][j].visibleA = True
+                #         self.maze.data[i][j].visibleB = False
+                #         playerA_count += 1
+                # if self.maze.data[i][j].visibleA and self.maze.data[i][j].visibleB:
+                #     # print(f"Marked cell {i}, {j} as visible to both.")
+                #     self.logger.debug(f"Marked cell {i}, {j} as visible to both.", extra={"who": "GameMaster"})
 
         self.playerA.maze = self.maze
         self.playerB.maze = self.maze
@@ -281,9 +289,9 @@ class GameMaster():
                 self.playerB.create_request()
 
                 # print(f"[ Negotiation ] A proposal is: \n\tOFFER {self.playerA.offer}\n\tREQUEST {self.playerA.request}")
-                self.logger.info(f"A proposal is: \n\tOFFER {self.playerA.offer}\n\tREQUEST {self.playerA.request}", extra={"who": "Negotiation"})
+                self.logger.debug(f"A proposal is: \n\tOFFER {self.playerA.offer}\n\tREQUEST {self.playerA.request}", extra={"who": "Negotiation"})
                 # print(f"[ Negotiation ] B proposal is: \n\tOFFER {self.playerB.offer}\n\tREQUEST {self.playerB.request}")
-                self.logger.info(f"B proposal is: \n\tOFFER {self.playerB.offer}\n\tREQUEST {self.playerB.request}", extra={"who": "Negotiation"})
+                self.logger.debug(f"B proposal is: \n\tOFFER {self.playerB.offer}\n\tREQUEST {self.playerB.request}", extra={"who": "Negotiation"})
 
                 if self.playerA.proposal(self.playerB.offer, self.playerB.request, i) and self.playerB.proposal(self.playerA.offer, self.playerA.request, i):
                     # print(f"[ Negotiation ] Succes!")
@@ -308,34 +316,46 @@ class GameMaster():
         self.maze.data[self.playerB.pos.x][self.playerB.pos.y].visibleB = True
 
         if self.playerA.win() and self.playerB.win():
-            self.state = self.DRAW
+            # self.state = self.DRAW
+            self.set_state(self.DRAW)
+            self.playerA.score += 1
+            self.playerB.score += 1
             # print("[ Debug ] Draw.")
             self.logger.info("The game finished in a draw.", extra={"who": "GameMaster"})
 
         elif self.playerA.win():
-            self.state = self.WIN_A
-            self.playerA.score += 1
+            # self.state = self.WIN_A
+            self.set_state(self.WIN_A)
+            self.playerA.score += 2
+            self.playerB.score -= 1
             # print("[ Debug ] A won.")
             self.logger.info("A won the game.", extra={"who": "GameMaster"})
 
         elif self.playerB.win():
-            self.state = self.WIN_B
-            self.playerB.score += 1
+            # self.state = self.WIN_B
+            self.set_state(self.WIN_B)
+            self.playerB.score += 2
+            self.playerA.score -= 1
             # print("[ Debug ] B won.")
             self.logger.info("B won the game.", extra={"who": "GameMaster"})
-        
+
         elif self.state == self.QUIT: 
             return
         
         else:
-            self.state = self.RUNNING
+            # self.state = self.RUNNING
+            self.set_state(self.RUNNING)
         
-        self.iteration += 1
-
-        if self.iteration >= 500:
+        if self.iteration >= 300:
             # print("[ Info ][ GameMaster ] Iteration count over 500. Marking the game as a draw.")
-            self.logger.info("Iteration count over 500. Marking the game as a draw.", extra={"who": "GameMaster"})
-            self.state = self.DRAW
+            self.logger.info("Iteration count over 300. Marking the game as a draw.", extra={"who": "GameMaster"})
+            # self.state = self.DRAW
+            self.set_state(self.DRAW)
+            self.playerA.score -= 2
+            self.playerB.score -= 2
+        else:
+            self.iteration += 1
+
 
     def _draw_results(self):
 
@@ -360,10 +380,13 @@ class GameMaster():
 
         # Holds who exactly won in each round
         self.results = []
-
         for round in range(1, rounds+1):
             
-            self.state = self.RUNNING
+            # self.state = self.RUNNING
+
+            # First reset, the set.
+            self.set_state(self.NONE)
+            self.set_state(self.RUNNING)
             self.iteration = 0
 
             self.logger.info(f"Starting round {round}...", extra={"who": "GameMaster"})
@@ -372,6 +395,20 @@ class GameMaster():
             # Reset players & maze for a new game iteration.
             self._create_maze()
             self._create_start_finish()
+
+            (x, y) = self.playerA.pos.to_tuple()
+            self.maze.data[x][y].visibleA = True
+            if self.maze.is_valid_position(x-1, y): self.maze.data[x-1][y].visibleA = True
+            if self.maze.is_valid_position(x, y+1): self.maze.data[x][y+1].visibleA = True
+            if self.maze.is_valid_position(x+1, y): self.maze.data[x+1][y].visibleA = True
+            if self.maze.is_valid_position(x, y-1): self.maze.data[x][y-1].visibleA = True
+            
+            (x, y) = self.playerB.pos.to_tuple()
+            self.maze.data[x][y].visibleB = True
+            if self.maze.is_valid_position(x-1, y): self.maze.data[x-1][y].visibleB = True
+            if self.maze.is_valid_position(x, y+1): self.maze.data[x][y+1].visibleB = True
+            if self.maze.is_valid_position(x+1, y): self.maze.data[x+1][y].visibleB = True
+            if self.maze.is_valid_position(x, y-1): self.maze.data[x][y-1].visibleB = True
 
             # print(f"[ Debug ][ PlayerA ] (after recalculation) Start from {self.playerA.start} and finish at {self.playerA.finish}.")
             self.logger.debug(f"(after recalculation) Start from {self.playerA.start} and finish at {self.playerA.finish}.", extra={"who": "PlayerA"})
@@ -392,7 +429,7 @@ class GameMaster():
 
                 if self.state in (self.WIN_A, self.WIN_B, self.DRAW):
                     self._draw_results()
-                    self.results.append(self.state)
+                    self.results.append((self.state, self.iteration))
 
                     # If it is not the last round
                     if round != rounds and not self.training:
@@ -448,7 +485,8 @@ class GameMaster():
             
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    self.state = self.QUIT
+                    # self.state = self.QUIT
+                    self.set_state(self.QUIT)
                     break
 
                 if event.type == pygame.MOUSEBUTTONDOWN:
@@ -462,21 +500,23 @@ class GameMaster():
                         self.buttonNextMove.enabled = False
                     
                     elif self.buttonNextMove.enabled and self.buttonNextMove.inside(pos):
-                        self.state = self.UPDATE_POSITION
+                        # self.state = self.UPDATE_POSITION
+                        self.set_state(self.UPDATE_POSITION)
                 
             if self.buttonLoop.enabled and self.state != self.QUIT:
                 pygame.time.delay(delay)
-                self.state = self.UPDATE_POSITION
+                # self.state = self.UPDATE_POSITION
+                self.set_state(self.UPDATE_POSITION)
             
             # All rounds were played
             if len(self.results) == rounds:
                 game_thread.join()
                 pygame.quit()
-                print("[ GameMaster ] Training finished, the application closed normally.")
+                # print("[ GameMaster ] Training finished, the application closed normally.")
                 self.logger.info("Training finished, the application closed normally.", extra={"who": "GameMaster"})
                 return
         
         game_thread.join()
         pygame.quit()
-        print("[ GameMaster ] The application was closed by the user.")
+        # print("[ GameMaster ] The application was closed by the user.")
         self.logger.info("The application was closed by the user.", extra={"who": "GameMaster"})

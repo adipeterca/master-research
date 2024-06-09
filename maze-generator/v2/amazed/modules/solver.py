@@ -31,6 +31,47 @@ def standard_minkowski(start, end, p=3):
     (endx, endy) = end
     return (abs(x-endx)**p + abs(y-endy)**p) ** (1/p)
 
+def flood_fill(maze : Maze) -> int:
+    '''
+    It is not indended to be used as a unique solver between START and FINISH.\n
+    It counts the total number of separate areas in a maze.
+    '''
+
+    # Mark all cells as unvisited with -1.
+    array = np.full((maze.rows, maze.columns), -1)
+
+    areas = 0
+    for i in range(maze.rows):
+        for j in range(maze.columns):
+            if array[i][j] == -1:
+                areas += 1
+                queue = [(i, j, areas)]
+
+                while len(queue) != 0:
+
+                    (x, y, area_value) = queue.pop(0)
+
+                    array[x][y] = area_value
+
+                    # North
+                    if maze.is_valid_position(x-1, y) and not maze.is_wall(x, y, x-1, y) and array[x-1][y] == -1:
+                        queue.append((x-1, y, area_value))
+                
+                    # East
+                    if maze.is_valid_position(x, y+1) and not maze.is_wall(x, y, x, y+1) and array[x][y+1] == -1:
+                        queue.append((x, y+1, area_value))
+
+                    # South
+                    if maze.is_valid_position(x+1, y) and not maze.is_wall(x, y, x+1, y) and array[x+1][y] == -1:
+                        queue.append((x+1, y, area_value))
+
+                    # West
+                    if maze.is_valid_position(x, y-1) and not maze.is_wall(x, y, x, y-1) and array[x][y-1] == -1:
+                        queue.append((x, y-1, area_value))
+
+    return areas
+
+
 class MazeSolver:
     '''
     Class-template depicting a maze-solving algorithm.
@@ -271,7 +312,8 @@ class Lee(MazeSolver):
                 queue.append((x, y-1, current_value+1))
 
         if self.array[self.maze.rows-1][self.maze.columns-1] == -1:
-            raise RuntimeError("Could not find a path from start to finish!")
+            # self.maze.export(output=None)
+            raise RuntimeError(f"Could not find a path from start {self.start} to finish {self.end}!")
 
         # Start from the end point and go to a position that is always LOWER
         self.steps.append(self.end)
@@ -299,8 +341,8 @@ class Lee(MazeSolver):
         A maze is connected if all cells are accessible.
         '''
 
-        for i in range(self.rows):
-            for j in range(self.columns):
+        for i in range(self.maze.rows):
+            for j in range(self.maze.columns):
                 if self.array[i][j] == -1:
                     return False
         return True
@@ -484,10 +526,7 @@ class DFSHeuristic(MazeSolver):
         h = _h if h is None else h
         self.cells = [self.start]
 
-        while self.cells[-1] != self.end:       
-            if len(self.cells) == 0:
-                raise ValueError(f"Could not find a connected path from {self.start} to {self.finish}!")
-
+        while self.cells[-1] != self.end:
             (x, y) = self.cells[-1]
             self.visited.append((x, y))
 
@@ -518,6 +557,9 @@ class DFSHeuristic(MazeSolver):
                 self.cells.append((pqueue[0][0], pqueue[0][1]))
             else:
                 self.cells.pop()
+
+            if len(self.cells) == 0:
+                raise ValueError(f"Could not find a connected path from {self.start} to {self.end}!")
             
         # Deep copy the list
         for cell in self.cells:

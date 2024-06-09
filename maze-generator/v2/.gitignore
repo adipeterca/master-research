@@ -3,4 +3,5 @@ RUN_*
 __pycache__
 tmp
 tester.py
-game_logs
+gamemaster.log
+genetic-algorithm.log

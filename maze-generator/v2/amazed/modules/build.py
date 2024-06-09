@@ -4,7 +4,7 @@ import time
 import numpy as np
 
 from amazed.modules.maze import Maze
-
+from amazed.modules.solver import flood_fill
 
 class Sculptor():
     '''
@@ -84,7 +84,7 @@ class BinaryTree(Sculptor):
                 if random.random() < 0.5:
                     if maze.is_valid_position(i-1, j):
                         maze.path(i, j, Maze.NORTH)
-                    # If the cell does not have a path to North,
+                    # If the cell does not have a path to NORTH,
                     # instead carve a path to West
                     elif maze.is_valid_position(i, j-1):
                         maze.path(i, j, Maze.WEST)
@@ -92,7 +92,7 @@ class BinaryTree(Sculptor):
                     if maze.is_valid_position(i, j-1):
                         maze.path(i, j, Maze.WEST)
                     # If the cell does not have a path to West,
-                    # instead carve a path to North
+                    # instead carve a path to NORTH
                     elif maze.is_valid_position(i-1, j):
                         maze.path(i, j, Maze.NORTH)
     
@@ -360,8 +360,6 @@ class AldousBroder(Sculptor):
 
 class RandomCarving(Sculptor):
     def __init__(self, maze: Maze, seed: int = None, gif: bool = True, original_chance:int = 0.05, multicell:bool = True, adaptive:bool = True, adaptive_function = None) -> None:
-        super().__init__(maze, seed, gif)
-
         '''
         Break walls at random in the given @maze. Can be used as a method of creating multiple paths in a single-solution maze.
 
@@ -372,9 +370,11 @@ class RandomCarving(Sculptor):
                     Otherwise, each wall will have the same chance to be broken.
         @adaptive_function: what function to use to update the chance after each unbroken wall. \n
                             MUST have the following signature: func (curr_chance, streak_number) -> float.\n
-                            By default, it will increase by 0.01 for each consecutive unbreaked wall.\n
+                            By default, it will increase by 0.3 for each consecutive unbreaked wall.\n
                             Works only if @adaptive is set to True.\n
         '''
+        super().__init__(maze, seed, gif)
+
         
         adaptive_function = self.__adaptive_function__ if adaptive_function is None else adaptive_function
 
@@ -422,13 +422,11 @@ class RandomCarving(Sculptor):
                         if adaptive:
                             chance = adaptive_function(original_chance, streak)
 
-    def __adaptive_function__(self, choice: float, streak: int) -> float:
-        return choice + streak * 0.01
+    def __adaptive_function__(self, chance: float, streak: int) -> float:
+        return chance + streak * 0.3
     
 class Spiral(Sculptor):
     def __init__(self, maze: Maze, seed: int = None, gif: bool = True, x:int = 0, y:int = 0, max_len:int = 10) -> None:
-        super().__init__(maze, seed, gif)
-
         '''
         Inspired by hunt and kill.
         Select the starting node as (x, y)\n.
@@ -439,6 +437,8 @@ class Spiral(Sculptor):
 
         @max_len    : represents how long a hallway can be
         '''
+        super().__init__(maze, seed, gif)
+
 
         if gif:
             self.add_frame(x, y)
@@ -535,3 +535,387 @@ class Spiral(Sculptor):
                 if j >= maze.columns:
                     j = 0
                     i += 1
+
+class Sidewinder(Sculptor):
+    def __init__(self, maze: Maze, seed: int = None, gif: bool = True) -> None:
+        super().__init__(maze, seed, gif)
+
+        if gif:
+            self.add_frame(0, 0)
+
+        
+        # The first row needs to be fully carved to the east
+        for i in range(maze.columns):
+            if maze.is_valid_position(0, i+1):
+                maze.path(0, i, Maze.EAST)
+            if gif:
+                self.add_frame(0, i)
+
+
+        run = []
+        for i in range(1, maze.rows):
+            run.clear()
+            for j in range(maze.columns):
+                run.append((i, j))
+                
+                # Can we carve EAST?
+                if maze.is_valid_position(i, j+1) and random.random() > 0.5:
+                        maze.path(i, j, Maze.EAST)
+                else:
+                    cell = random.choice(run)
+                    maze.path(cell[0], cell[1], Maze.NORTH)
+                    run.clear()
+                
+                if gif:
+                    self.add_frame(i, j)
+
+class RandomPrim(Sculptor):
+    def __init__(self, maze: Maze, seed: int = None, gif: bool = True, x: int = None, y: int = None) -> None:
+        '''
+        If @x and @y are left as None, they start off from the center of the maze.
+        '''
+        super().__init__(maze, seed, gif)
+
+        x = maze.rows // 2 if x is None else x
+        y = maze.columns // 2 if y is None else y
+
+        if gif:
+            self.add_frame(x, y)
+
+        visited = set()
+        
+        visited.add((x, y))
+        frontier = []
+        while len(visited) != maze.rows * maze.columns:
+            # Iterate through the visited array and add all cells that have an unvisited neighbor
+            for (x, y) in visited:
+                # Check all neighbors of (x, y)
+                if (x-1, y) not in visited and maze.is_valid_position(x-1, y) and (x, y, x-1, y) not in frontier:
+                    frontier.append((x, y, x-1, y))
+                if (x, y+1) not in visited and maze.is_valid_position(x, y+1) and (x, y, x, y+1) not in frontier:
+                    frontier.append((x, y, x, y+1))
+                if (x+1, y) not in visited and maze.is_valid_position(x+1, y) and (x, y, x+1, y) not in frontier:
+                    frontier.append((x, y, x+1, y))
+                if (x, y-1) not in visited and maze.is_valid_position(x, y-1) and (x, y, x, y-1) not in frontier:
+                    frontier.append((x, y, x, y-1))
+
+            if len(frontier) == 0:
+                raise ValueError(f"It seems that frontier has a length of 0. Here is what I known.\nvisited = {visited}")
+
+            # Find a pair of visited_cell and unvisited_cell in frontier
+            random.shuffle(frontier)
+
+            for x1, y1, x2, y2 in frontier:
+                if (x2, y2) not in visited:
+                    break
+
+            if gif:
+                self.add_frame(x1, y1)
+
+            maze.path_to_cell(x1, y1, x2, y2)
+            visited.add((x2, y2))
+
+            if gif:
+                self.add_frame(x2, y2)
+
+class RecursiveDivision(Sculptor):
+    def __init__(self, maze: Maze, seed: int = None, gif: bool = True) -> None:
+        super().__init__(maze, seed, gif)
+
+        self.__recursive_division__(0, maze.rows-1, 0, maze.columns-1)
+        
+        # Because the algorithm work by adding walls, we toggle them at the end
+        maze.toggle()
+
+    def __recursive_division__(self, start_row, end_row, start_column, end_column):
+        '''
+        row \\in [start_row, end_row] (INCLUSIVE)\n
+        column \\in [start_column, end_column] (INCLUSIVE)\n
+        The rows & columns are for cells in the maze. However, the algorithm works with wall lines, not cell lines.
+        '''
+
+        # Base case
+        if end_row - start_row == 0 and end_column - start_column == 0:
+            return
+
+        # There is always one more wall
+        walls_row = end_row - start_row + 1
+        walls_column = end_column - start_column + 1
+
+        if walls_row > walls_column:
+            wall_index = walls_row // 2 + start_row
+
+            # This is the wall that will "remain", later being turn into a path by .toggle()
+            random_wall_column = random.randint(start_column, end_column)
+            for i in range(start_column, end_column+1):
+                if i != random_wall_column:
+                    self.maze.path(wall_index-1, i, Maze.SOUTH)
+            
+            self.__recursive_division__(start_row, wall_index-1, start_column, end_column)
+            self.__recursive_division__(wall_index, end_row, start_column, end_column)
+        
+        else:
+            wall_index = walls_column // 2 + start_column
+
+            random_wall_row = random.randint(start_row, end_row)
+            for i in range(start_row, end_row+1):
+                if i != random_wall_row:
+                    self.maze.path(i, wall_index-1, Maze.EAST)
+
+            self.__recursive_division__(start_row, end_row, start_column, wall_index-1)
+            self.__recursive_division__(start_row, end_row, wall_index, end_column)
+
+class WallsCellularAutomata(Sculptor):
+    '''
+    CA that evolves the maze, starting from the initial state for X generations.\n
+    It uses a 3-neighbors rule. By default it uses Rule 110:\n
+    '111': '0',\n
+    '110': '1',\n
+    '101': '1',\n
+    '100': '0',\n
+    '011': '1',\n
+    '010': '1',\n
+    '001': '1',\n
+    '000': '0'
+    '''
+    def __init__(self, maze: Maze, seed: int = None, gif: bool = True, generations:int=10, rules:dict=None) -> None:
+
+        super().__init__(maze, seed, gif)
+
+        if rules is None:
+            rules = {
+                '111': '0',
+                '110': '1',
+                '101': '1',
+                '100': '0',
+                '011': '1',
+                '010': '1',
+                '001': '1',
+                '000': '0'
+            }
+
+        if gif:
+            self.add_frame()
+
+        bitstring = maze.get_wall_bitstring()
+        new_bitstring = []
+        for gen in range(generations):
+            bitstring = ["1" if random.random() > 0.5 else "0"] + bitstring + ["1" if random.random() > 0.5 else "0"]
+            new_bitstring.clear()
+
+            for i in range(len(bitstring) - 2):
+                neighbors = "".join([bitstring[1+i+j] for j in (-1, 0, 1)])
+                new_bitstring += rules[neighbors]
+            
+            bitstring = new_bitstring
+            self.maze.reset()
+            self.maze.set_wall_bitstring(bitstring)
+            if gif:
+                self.add_frame()
+
+    def add_frame(self):
+
+        # Here you can modify the distance
+        frame = self.maze.export(show=False)
+        self.frames.append(frame)
+
+class GeneticAlgorithm(Sculptor):
+    
+    def __init__(self, maze: Maze, seed: int = None, gif: bool = True, parameters:dict = None, autorun:bool=True) -> None:
+        '''
+        Class that uses a genetic algorithm to evolve a maze. It heavy relies on the @parameters dictionary, so make
+        sure that all values are correct.
+        @parameters : {
+            "GENERATIONS" : int,
+            "INITIAL_POPULATION" : [],
+            "INITIAL_POPULATION_MUTATION_CHANCE" : float,
+            "POP_SIZE" : int,
+            "MUTATION_CHANCE" : float,
+            "CROSSOVER_CHANCE" : float,
+            "K_ELITISM" : int
+        }
+        '''
+        super().__init__(maze, seed, gif)
+        self.gif = gif
+
+        if parameters is None:
+            raise RuntimeError(f"[GeneticAlgorithm] You forgot to specify the parameters.")
+        
+        self.GENERATIONS = parameters["GENERATIONS"]
+        self.POPULATION = self.create_population(
+            parameters["INITIAL_POPULATION"], 
+            parameters["INITIAL_POPULATION_MUTATION_CHANCE"],
+            parameters["POP_SIZE"]
+        )
+        self.POP_SIZE = parameters["POP_SIZE"]
+        self.CHROMOSOME_LENGTH = self.maze.rows * (self.maze.columns - 1) + self.maze.columns * (self.maze.rows - 1)
+        self.MUTATION_CHANCE = parameters["MUTATION_CHANCE"]
+        self.CROSSOVER_CHANCE = parameters["CROSSOVER_CHANCE"]
+        self.K_ELITISM = parameters["K_ELITISM"]
+
+        if autorun:
+            self.run()
+        
+    def run(self):
+        '''
+        Runs the GA algorithm. If needed, this function can be overridden.
+        '''
+
+        self.best_individual_all = ''
+        self.best_score_all = 0
+        self.gen_change = 0
+
+        for gen in range(1, self.GENERATIONS):
+            print(f"[ GeneticAlgorithm ][ run ] Generation: {gen} / {self.GENERATIONS+1}")
+            scores = []
+
+            for index in range(self.POP_SIZE):
+                individual = self.POPULATION[index]
+                assert isinstance(individual, list), f"Individual is of type {type(individual)}"
+                
+                scores.append((index, self.fitness(individual)))
+
+            self.sorted_scores = sorted(scores, key=lambda item: item[1])
+
+            best_current_index = self.sorted_scores[-1][0]
+            best_current_score = self.sorted_scores[-1][1]
+            best_individual = self.POPULATION[best_current_index]
+
+            if self.best_score_all <= best_current_score:
+                self.best_score_all = best_current_score
+                self.best_individual_all = best_individual
+                self.gen_change = gen
+
+            # Clear previously best population
+            self.new_population = []
+
+            self.selection()
+
+            self.crossover()
+
+            self.mutation()
+
+            self.elitism()
+                
+            if len(self.new_population) != len(self.POPULATION):
+                print(*self.new_population, sep="\n")
+                raise RuntimeError(f"how did you??")
+
+            self.POPULATION = self.new_population
+            if self.gif:
+                self.add_frame
+
+        self.maze.reset()
+        self.maze.set_wall_bitstring(self.best_individual_all)
+
+    def create_population(self, initial_population:list, mutation_chance:float, pop_size:int) -> list:
+        
+        # Population is given
+        if len(initial_population) > 0:
+            if isinstance(initial_population[0], list):
+                return initial_population
+            else:
+                raise RuntimeError(f"[ GeneticAlgorithm ][ create_population ] Individuals from a population must be list objects.")
+        
+        # No population given, randomly create one based on the bitstring of the maze
+        if len(initial_population) == 0:
+            population = []
+            bitstring = self.maze.get_wall_bitstring()
+            bitstring = "".join(bitstring)
+            for i in range(pop_size):
+                new_bitstring = []
+                for j in bitstring:
+                    if random.random() < mutation_chance:
+                        new_bitstring.append("0") if j == "1" else new_bitstring.append("1")
+                    else:
+                        new_bitstring.append(j)
+                population.append(new_bitstring)
+            
+            return population
+        
+        raise RuntimeError(f"[GeneticAlgorithm] Something went wrong with population creation. Population: {population}")
+
+    def fitness(self, idv=list):
+        # In the future, this process could be optimized
+        # to use only the bitstring without creating a new maze.
+        new_maze = Maze(self.maze.rows, self.maze.columns)
+
+        new_maze.set_wall_bitstring(idv)
+
+        intersection_score = 0
+        for i in range(new_maze.rows):
+            for j in range(new_maze.columns):
+                walls = 0
+                for wall in (Maze.NORTH, Maze.EAST, Maze.SOUTH, Maze.WEST):
+                    if new_maze.data[i][j].walls[wall]:
+                        walls += 1
+                if walls == 0:
+                    intersection_score += -0.1
+                if walls == 1:
+                    intersection_score += 0.1
+                if walls == 2:
+                    intersection_score += 0.4
+                if walls == 3:
+                    intersection_score += 0.2
+                if walls == 4:
+                    intersection_score += -1
+
+        # M_3
+        curr_score = intersection_score / (new_maze.rows * new_maze.columns)
+        areas = flood_fill(new_maze)
+
+        # M_5
+        curr_score = curr_score + 1 / areas
+
+        return curr_score
+
+    def selection(self):
+        total_fitness = sum(_[1] for _ in self.sorted_scores)
+        probabilities = [f / total_fitness for _, f in self.sorted_scores]
+
+        cumulative_probabilities = [0]
+        cumulative_sum = 0
+        for p in probabilities:
+            cumulative_sum += p
+            cumulative_probabilities.append(cumulative_sum)
+
+        # Selection using roulette wheel
+        for i in range(self.POP_SIZE):
+            spin = random.random()
+            for j in range(self.POP_SIZE):
+                if cumulative_probabilities[j] <= spin and spin < cumulative_probabilities[j+1]:
+                    self.new_population.append(self.POPULATION[j])
+                    break
+
+    def crossover(self):
+        for i in range(0, self.POP_SIZE, 2):
+            if random.random() < self.CROSSOVER_CHANCE:
+                crossover_point = random.randint(1, self.CHROMOSOME_LENGTH-1)
+
+                x = self.new_population[i][:crossover_point] + self.new_population[i+1][crossover_point:]
+                y = self.new_population[i+1][:crossover_point] + self.new_population[i][crossover_point:]
+
+                self.new_population[i] = x
+                self.new_population[i+1] = y
+
+    def mutation(self):
+        for i in range(self.POP_SIZE):
+            for j in range(self.CHROMOSOME_LENGTH):
+                if random.random() < self.MUTATION_CHANCE:
+                    if self.new_population[i][j] == "0":
+                        self.new_population[i][j] = "1"
+                    elif self.new_population[i][j] == "1":
+                        self.new_population[i][j] = "0"
+                    else:
+                        raise ValueError(f"[ GA ] What :keklmao: {self.new_population[i][j]}")
+
+    def elitism(self):
+        for k in range(self.K_ELITISM):
+            idv_index = self.sorted_scores[-k][0]
+            self.new_population[-k] = self.POPULATION[idv_index]
+
+    def add_frame(self):
+        frame = self.maze.export(show=False)
+        self.frames.append(frame)
+
+

@@ -107,45 +107,45 @@ def build_and_train():
 def test():
     from keras.models import load_model
     from keras.utils import custom_object_scope
-    from keras.utils.vis_utils import plot_model
+    # from keras.utils.vis_utils import plot_model
     import time
 
     model_version = 'v1.top'
-    # model_id = '1'
+    model_id = '1'
 
-    for model_id in range(1, 4):
-        with custom_object_scope({'squared_relu': squared_relu}):
-            model = load_model(f'{model_version}/{model_id}.h5')
+    # for model_id in range(1, 4):
+    #     with custom_object_scope({'squared_relu': squared_relu}):
+    #         model = load_model(f'{model_version}/{model_id}.h5')
 
-            total = 0
-            for i in range(1000):
-                start_time = time.time()
-                latent_input = generate_latent_space(100, 1)
-                model.predict(latent_input, verbose=0)
-                stop_time = time.time()
-                total = stop_time - start_time
-            avg_speed = total/1000
-            print(avg_speed)
+    #         total = 0
+    #         for i in range(1000):
+    #             start_time = time.time()
+    #             latent_input = generate_latent_space(100, 1)
+    #             model.predict(latent_input, verbose=0)
+    #             stop_time = time.time()
+    #             total = stop_time - start_time
+    #         avg_speed = total/1000
+    #         print(avg_speed)
 
-    # with custom_object_scope({'squared_relu': squared_relu}):
-        # model = load_model(f'{model_version}/generator_epoch_{model_id}.h5')
+    with custom_object_scope({'squared_relu': squared_relu}):
+        model = load_model(f'{model_version}/{model_id}.h5')
 
     # plot_model(model, to_file=f'architecture_{model_id}.png', show_shapes=True, rankdir='LR')
     # os.makedirs(f'{model_version}/{model_id}/')
 
     
 
-    # for i in range(5):
+    for i in range(1):
 
-        # latent_input = generate_latent_space(100, 1)
+        latent_input = generate_latent_space(100, 1)
 
-        # output = model.predict(latent_input)
-        # output = np.squeeze(output, axis=0)
-        # threshold = np.mean(output)
-        # output = np.where(output > threshold, 255, 0)
+        output = model.predict(latent_input)
+        output = np.squeeze(output, axis=0)
+        threshold = np.mean(output)
+        output = np.where(output > threshold, 255, 0)
 
-        # # cv2.imwrite(f'{model_version}/{model_id}/{i}.png', output)
-        # cv2.imwrite(f'test_output.png', output)
+        # cv2.imwrite(f'{model_version}/{model_id}/{i}.png', output)
+        cv2.imwrite(f'test_output.png', output)
 
 if __name__ == '__main__':
     test()

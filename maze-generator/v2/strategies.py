@@ -60,10 +60,11 @@ class SimpleAgent(Player):
     The chromosome is structured as follows:
     * 4 bytes represent DNEXT
     * 4 bytes represent DXNEXT
-    * 3 bytes represent MOFF (multiplier for offer distance)
-    * 3 bytes represent MREQ (multiplier for request distance)
-    * 4 bytes represent SCORE_THRESHOLD
-    * 4 bytes represent INITIAL_DFS_EXPLORATION_CHANCE
+    * 8 bytes represent MOFF (multiplier for offer distance)
+    * 8 bytes represent MREQ (multiplier for request distance)
+    * 8 bytes represent SCORE_THRESHOLD
+    * 8 bytes represent DFS_EXPLORATION_CHANCE
+    * 8 bytes represent ATTEMPT_MULTIPLIER (increase the chance that a negotiation will take place)
 
     (req - xoff) = 0 e ce vreau eu
     altfel deviaza de la ce am cerut (nu iau in calcul posibilitatea ca imi ofera ceva "mai bun")
@@ -87,7 +88,7 @@ class SimpleAgent(Player):
     Each field is described in detail in the full documentation.
     '''
 
-    CHROMOSOME_LENGTH = 22
+    CHROMOSOME_LENGTH = 48
 
     def __init__(self, name, maze: Maze, start=None, finish=None):
         super().__init__(name, maze, start, finish)
@@ -110,22 +111,48 @@ class SimpleAgent(Player):
             self.dnext = int("".join(self.strategy[0:4]), base=2) + 1
             self.dxnext = int("".join(self.strategy[4:8]), base=2) + 1
 
-            self.moff = int("".join(self.strategy[8:11]), base=2)
-            self.mreq = int("".join(self.strategy[11:14]), base=2)
+            self.moff = int("".join(self.strategy[8:16]), base=2) / (2**8 - 1)
+            self.mreq = int("".join(self.strategy[16:24]), base=2) / (2**8 - 1)
 
-            self.score_threshold = int("".join(self.strategy[14:18]), base=2)
+            self.score_threshold = int("".join(self.strategy[24:32]), base=2) / (2**8 - 1)
 
             # Value between [0, 15], that's why we divide by 15 -> scale it between [0, 1]
-            self.dfs_exploration_chance = int("".join(self.strategy[18:22]), base=2) / 15
+            self.dfs_exploration_chance = int("".join(self.strategy[32:40]), base=2) / (2**8 - 1)
+
+            self.attempt_modifier = int("".join(self.strategy[40:48]), base=2) / (2**8 - 1)
 
         except TypeError as e:
             print(e)
             self.logger.error(e, extra={"who" : self.name})
             self.logger.error(f"Could not convert strategy <{strategy}> to int in base 2.", extra={"who" : self.name})
-            raise RuntimeError(f"Could not convert strategy <{strategy}> to int in base 2.")
+            raise RuntimeError(f"[{self.name}] Could not convert strategy <{strategy}> to int in base 2.")
 
         max_possible_distance = self._distance_metric((0, 0), (self.maze.rows-1, self.maze.columns-1))
         self.max_score = max_possible_distance * self.moff + max_possible_distance * self.mreq
+
+    @classmethod
+    def print_strategy(strategy):
+        dnext = int("".join(strategy[0:4]), base=2) + 1
+        dxnext = int("".join(strategy[4:8]), base=2) + 1
+
+        moff = int("".join(strategy[8:16]), base=2) / (2**8 - 1)
+        mreq = int("".join(strategy[16:24]), base=2) / (2**8 - 1)
+
+        score_threshold = int("".join(strategy[24:32]), base=2) / (2**8 - 1)
+
+        # Value between [0, 15], that's why we divide by 15 -> scale it between [0, 1]
+        dfs_exploration_chance = int("".join(strategy[32:40]), base=2) / (2**8 - 1)
+
+        attempt_modifier = int("".join(strategy[40:48]), base=2) / (2**8 - 1)
+
+        print(f"dnext = {dnext}")
+        print(f"dxnext = {dxnext}")
+        print(f"moff = {moff}")
+        print(f"mreq = {mreq}")
+        print(f"score_threshold = {score_threshold}")
+        print(f"dfs_exploration_chance = {dfs_exploration_chance}")
+        print(f"attempt_modifier = {attempt_modifier}")
+        
 
     def create_request(self):
         '''
@@ -151,9 +178,9 @@ class SimpleAgent(Player):
         if self.request is None:
             self.request = last_unknown_cell
 
-        if self.request is None:
-            self.logger.error(f"I could not find a cell to request...", extra={"who" : self.name})
-            raise RuntimeError("how can it be??")
+        # if self.request is None:
+        #     self.logger.error(f"I could not find a cell to request...", extra={"who" : self.name})
+        #     raise RuntimeError("how can it be??")
 
         # Just a gimmick and for a better usability
         return self.request
@@ -206,9 +233,9 @@ class SimpleAgent(Player):
             if self.offer is None:
                 self.offer = last_known_cell
 
-        if self.offer is None:
-            self.logger.error(f"how??", extra={"who" : self.name})
-            raise RuntimeError("how??")
+        # if self.offer is None:
+        #     self.logger.error(f"how??", extra={"who" : self.name})
+        #     raise RuntimeError("how??")
             
         # Just a gimmick for better usability
         return self.offer
@@ -218,21 +245,27 @@ class SimpleAgent(Player):
         if self.strategy is None:
             self.logger.error(f"You forgot to set the strategy for me!", extra={"who" : self.name})
             raise RuntimeError(f"[ SimpleAgent ][ {self.name} ] You forgot to set the strategy for me!")
+        
+        if offer is None or request is None:
+            return False
+        if self.is_visible(offer) or self.is_visible(request):
+            return False
 
         self.opponent_past_offers.append(offer)
         self.opponent_past_requests.append(request)
 
         curr_score = self._distance_metric(self.request, offer) * self.mreq + \
-                     self._distance_metric(self.offer, request) * self.moff
+                     self._distance_metric(self.offer, request) * self.moff - \
+                     attempt * self.attempt_modifier
         
         # Scale it between 0 and 15
         if self.max_score == 0:
             curr_score_adj = 0
         else:
-            curr_score_adj = (curr_score / self.max_score) * 15
+            curr_score_adj = (curr_score / self.max_score)
 
         self.logger.info(f"Score for current proposal : {curr_score}", extra={"who" : self.name})
-        self.logger.info(f"Score for current proposal, adjusted between [0, 15] : {curr_score_adj} (must be <= than {self.score_threshold})", extra={"who" : self.name})
+        self.logger.info(f"Score for current proposal, adjusted between [0, 1] : {curr_score_adj} (must be <= than {self.score_threshold})", extra={"who" : self.name})
         # print(f"[ SimpleAgent ][ {self.name} ] Proposal scores:")
         # print(f"\t\t\t self.offer : {self.offer}")
         # print(f"\t\t\t opponent.request : {request}")
