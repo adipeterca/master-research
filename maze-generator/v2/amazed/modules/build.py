@@ -918,4 +918,3 @@ class GeneticAlgorithm(Sculptor):
         frame = self.maze.export(show=False)
         self.frames.append(frame)
 
-

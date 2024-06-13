@@ -15,13 +15,13 @@ if __name__ == "__main__":
 
     start_time = datetime.now()
 
-    GENERATIONS = 20
+    GENERATIONS = 5
     CHROMOSOME_LENGTH = SimpleAgent.CHROMOSOME_LENGTH
-    POP_SIZE = 6          # Aim for an even number (see crossover)
+    POP_SIZE = 8          # Aim for an even number (see crossover)
     POPULATION = []
 
-    MUTATION_CHANCE = 0.6
-    CROSSOVER_CHANCE = 0.2
+    MUTATION_CHANCE = 0.3
+    CROSSOVER_CHANCE = 0.8
 
     best_strategy = None
     best_score = 0
@@ -44,6 +44,8 @@ if __name__ == "__main__":
 
         for i in POPULATION:
             logger.info(i)
+        for i in POPULATION:
+            logger.info(SimpleAgent.str_strategy(i))
 
         scores = {}
         for i, idv in enumerate(POPULATION):
@@ -59,24 +61,6 @@ if __name__ == "__main__":
                 gm.playerA.set_strategy(strategyA)
                 gm.playerB.set_strategy(strategyB)
 
-                logger.info("[ GA ] Strategy for PlayerA:")
-                logger.info(f"\tdnext = {gm.playerA.dnext}")
-                logger.info(f"\tdxnext = {gm.playerA.dxnext}")
-                logger.info(f"\tmreq = {gm.playerA.mreq}")
-                logger.info(f"\tmoff = {gm.playerA.moff}")
-                logger.info(f"\tscore_threshold = {gm.playerA.score_threshold}")
-                logger.info(f"\tdfs_exploration_chance = {gm.playerA.dfs_exploration_chance}")
-                logger.info(f"\tattempt_modifier = {gm.playerA.attempt_modifier}")
-                
-                logger.info("[ GA ] Strategy for PlayerB:")
-                logger.info(f"\tdnext = {gm.playerB.dnext}")
-                logger.info(f"\tdxnext = {gm.playerB.dxnext}")
-                logger.info(f"\tmreq = {gm.playerB.mreq}")
-                logger.info(f"\tmoff = {gm.playerB.moff}")
-                logger.info(f"\tscore_threshold = {gm.playerB.score_threshold}")
-                logger.info(f"\tdfs_exploration_chance = {gm.playerB.dfs_exploration_chance}")
-                logger.info(f"\tattempt_modifier = {gm.playerB.attempt_modifier}")
-
 
                 gm.run(rounds=1, training=True)
                 # Based of the number of rounds * 2 (maximum score for a win)
@@ -87,8 +71,8 @@ if __name__ == "__main__":
                 indexB = f"{j}-" + "".join(strategyB)
 
                 # Cap it between [-1, 1]
-                scores[indexA] += gm.playerA.score / maximum_score
-                scores[indexB] += gm.playerB.score / maximum_score
+                scores[indexA] += gm.playerA.individual_score / maximum_score
+                scores[indexB] += gm.playerB.individual_score / maximum_score
 
                 # for result, iterations, in gm.results:
                 #     if result == gm.WIN_A:

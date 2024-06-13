@@ -1,8 +1,11 @@
 from amazed.modules.maze import Maze
 from amazed.modules.build import DepthFirstSearch
 from amazed.modules.build import Sculptor
+from amazed.modules.solver import AStar
 from strategies import SimpleAgent
 from strategies import Player
+
+
 
 import random
 import pygame
@@ -67,6 +70,9 @@ class GameMaster():
         self._seed = seed
 
         self.maze = Maze(10, 10, self.GameCell)
+        self.total_possible_negotiations = 0
+        self.total_negotiations_attempts = 0
+        self.successful_negotiations = 0
 
         # Logging settings
         self.logger = logging.getLogger("GameMaster")
@@ -263,9 +269,9 @@ class GameMaster():
         self.FONT.render_to(self.screen, (self.buttonNextMove.body.x+23, self.buttonNextMove.body.y+7), "NEXT", self.buttonNextMove.text_color)
         self.FONT.render_to(self.screen, (self.buttonNextMove.body.x+20, self.buttonNextMove.body.y+30), "MOVE", self.buttonNextMove.text_color)
 
-        self.FONT.render_to(self.screen, (self.SCREEN_WIDTH//2-200, 20), f"SCORE: {self.playerA.score}", self.PLAYER_A)
+        self.FONT.render_to(self.screen, (self.SCREEN_WIDTH//2-200, 20), f"SCORE: {self.playerA.rounds_won}", self.PLAYER_A)
         self.FONT.render_to(self.screen, (self.SCREEN_WIDTH//2-50, 20), f"ITERATION: {self.iteration}", (0, 0, 0))
-        self.FONT.render_to(self.screen, (self.SCREEN_WIDTH//2+130, 20), f"SCORE: {self.playerB.score}", self.PLAYER_B)
+        self.FONT.render_to(self.screen, (self.SCREEN_WIDTH//2+130, 20), f"SCORE: {self.playerB.rounds_won}", self.PLAYER_B)
 
         self.FONT.render_to(self.screen, (self.SCREEN_WIDTH-120, self.SCREEN_HEIGHT//2-50), f"DISTANCE", (0, 0, 0))
         self.FONT.render_to(self.screen, (self.SCREEN_WIDTH-120, self.SCREEN_HEIGHT//2-25), f"TO FINISH", (0, 0, 0))
@@ -275,9 +281,12 @@ class GameMaster():
         pygame.display.update()
 
     def _update_game(self):
-        for i in range(3):
-            if self.playerA.wants_negotiation() and self.playerB.wants_negotiation():
 
+        # Change this to 1. Having the negotiation step set to 3 is too much.
+        for i in range(3):
+            self.total_possible_negotiations += 1
+            if self.playerA.wants_negotiation() and self.playerB.wants_negotiation():
+                self.total_negotiations_attempts += 1
                 # print(f"[ Negotiation ] Attempt number {i}:")
                 self.logger.info(f"Attempt number {i}:", extra={"who": "Negotiation"})
 
@@ -293,9 +302,14 @@ class GameMaster():
                 # print(f"[ Negotiation ] B proposal is: \n\tOFFER {self.playerB.offer}\n\tREQUEST {self.playerB.request}")
                 self.logger.debug(f"B proposal is: \n\tOFFER {self.playerB.offer}\n\tREQUEST {self.playerB.request}", extra={"who": "Negotiation"})
 
-                if self.playerA.proposal(self.playerB.offer, self.playerB.request, i) and self.playerB.proposal(self.playerA.offer, self.playerA.request, i):
+
+                resultA = self.playerA.proposal(self.playerB.offer, self.playerB.request, i)
+                resultB = self.playerB.proposal(self.playerA.offer, self.playerA.request, i)
+                if resultA and resultB:
                     # print(f"[ Negotiation ] Succes!")
                     self.logger.info("Succes!", extra={"who": "Negotiation"})
+
+                    self.successful_negotiations += 1
 
                     self.maze.data[self.playerB.offer[0]][self.playerB.offer[1]].visibleA = True
                     self.maze.data[self.playerA.offer[0]][self.playerA.offer[1]].visibleB = True
@@ -304,6 +318,14 @@ class GameMaster():
                 else:
                     # print(f"[ Negotiation ] Attempt {i} failed!")
                     self.logger.info(f"Attempt {i} failed!", extra={"who": "Negotiation"})
+
+                    if resultA and not resultB:
+                        self.logger.debug("PlayerA was OK with the trader, but PlayerB refused.", extra={"who":"Negotiation"})
+                    elif resultB and not resultA:
+                        self.logger.debug("PlayerB was OK with the trader, but PlayerA refused.", extra={"who":"Negotiation"})
+                    else:
+                        self.logger.debug("Both players refused.", extra={"who":"Negotiation"})
+
 
             else:
                 break
@@ -316,27 +338,50 @@ class GameMaster():
         self.maze.data[self.playerB.pos.x][self.playerB.pos.y].visibleB = True
 
         if self.playerA.win() and self.playerB.win():
-            # self.state = self.DRAW
+            
             self.set_state(self.DRAW)
-            self.playerA.score += 1
-            self.playerB.score += 1
-            # print("[ Debug ] Draw.")
+            self.playerA.rounds_won += 1
+            self.playerB.rounds_won += 1
+
+            # # GA related settings
+            # self.playerA.individual_score += 1
+            # self.playerB.individual_score += 1
+            self.playerA.individual_score += 0.5
+            self.playerB.individual_score += 0.5
+            # # #
+
             self.logger.info("The game finished in a draw.", extra={"who": "GameMaster"})
 
         elif self.playerA.win():
             # self.state = self.WIN_A
             self.set_state(self.WIN_A)
-            self.playerA.score += 2
-            self.playerB.score -= 1
-            # print("[ Debug ] A won.")
+            self.playerA.rounds_won += 1
+
+            # # GA related settings
+            # self.playerA.individual_score += 2
+            self.playerA.individual_score += 1
+            astar = AStar(self.maze, start=self.playerB.pos.to_tuple(), end=self.playerB.finish)
+            astar.solve()
+            # self.playerB.individual_score -= 1
+            self.playerB.individual_score += 1 / len(astar.steps)
+            # # #
+
             self.logger.info("A won the game.", extra={"who": "GameMaster"})
 
         elif self.playerB.win():
             # self.state = self.WIN_B
             self.set_state(self.WIN_B)
-            self.playerB.score += 2
-            self.playerA.score -= 1
-            # print("[ Debug ] B won.")
+            self.playerB.rounds_won += 1
+
+            # # GA related settings
+            # self.playerB.individual_score += 2
+            # self.playerA.individual_score -= 1
+            self.playerB.individual_score += 1
+            astar = AStar(self.maze, start=self.playerA.pos.to_tuple(), end=self.playerA.finish)
+            astar.solve()
+            # self.playerB.individual_score -= 1
+            self.playerA.individual_score += 1 / len(astar.steps)
+            # # #
             self.logger.info("B won the game.", extra={"who": "GameMaster"})
 
         elif self.state == self.QUIT: 
@@ -351,8 +396,18 @@ class GameMaster():
             self.logger.info("Iteration count over 300. Marking the game as a draw.", extra={"who": "GameMaster"})
             # self.state = self.DRAW
             self.set_state(self.DRAW)
-            self.playerA.score -= 2
-            self.playerB.score -= 2
+            # self.playerA.individual_score -= 2
+            # self.playerB.individual_score -= 2
+            astar = AStar(self.maze, start=self.playerA.pos.to_tuple(), end=self.playerA.finish)
+            astar.solve()
+            # self.playerB.individual_score -= 1
+            self.playerA.individual_score += 1 / len(astar.steps)
+
+            astar = AStar(self.maze, start=self.playerB.pos.to_tuple(), end=self.playerB.finish)
+            astar.solve()
+            # self.playerB.individual_score -= 1
+            self.playerB.individual_score += 1 / len(astar.steps)
+            
         else:
             self.iteration += 1
 
@@ -454,9 +509,9 @@ class GameMaster():
                 break
 
         self.screen.fill((255, 255, 255), self.board_lower)
-        if self.playerA.score > self.playerB.score:
+        if self.playerA.rounds_won > self.playerB.rounds_won:
             self.FONT.render_to(self.screen, (self.SCREEN_WIDTH//2-150, self.SCREEN_HEIGHT-30),"Winner of the tournament is Player A!" , (0,0,0))
-        elif self.playerA.score < self.playerB.score:
+        elif self.playerA.rounds_won < self.playerB.rounds_won:
             self.FONT.render_to(self.screen, (self.SCREEN_WIDTH//2-150, self.SCREEN_HEIGHT-30),"Winner of the tournament is Player B!" , (0,0,0))
         else:
             self.FONT.render_to(self.screen, (self.SCREEN_WIDTH//2-100, self.SCREEN_HEIGHT-30),"The tournament is a draw!" , (0,0,0))
@@ -520,3 +575,13 @@ class GameMaster():
         pygame.quit()
         # print("[ GameMaster ] The application was closed by the user.")
         self.logger.info("The application was closed by the user.", extra={"who": "GameMaster"})
+
+if __name__ == "__main__":
+    gm = GameMaster(seed=None)
+
+    strategyA = "".join([str(random.randint(0, 1)) for _ in range(SimpleAgent.CHROMOSOME_LENGTH)])
+    strategyB = "".join([str(random.randint(0, 1)) for _ in range(SimpleAgent.CHROMOSOME_LENGTH)])
+
+    gm.playerA.set_strategy(strategyA)
+    gm.playerB.set_strategy(strategyB)
+    gm.run()

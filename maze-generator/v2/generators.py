@@ -300,6 +300,7 @@ def v2_0_0():
 if __name__ == '__main__':
     import sys
     import numpy as np
+    from keras.utils import plot_model
 
     from amazed.modules.maze import Maze
     from logger import console
@@ -315,8 +316,11 @@ if __name__ == '__main__':
     # gen = load_model("RUN_6/v2.4.1.G_v2.3.6.D/interupted_model.h5")
     gen = load_model("RUN_6/v2.4.1.G_v2.3.6.D/generator_epoch_50.h5")
 
-    if len(sys.argv) == 3 and sys.argv[2] == 'summary':
+    if len(sys.argv) == 2 and sys.argv[1] == 'summary':
         gen.summary()
+        exit()
+    if len(sys.argv) == 2 and sys.argv[1] == 'plot_model':
+        plot_model(gen, show_shapes=True, show_layer_names=True, show_layer_activations=True)
         exit()
 
     output = utils.scale_output(gen)

@@ -363,7 +363,11 @@ class Maze:
                 for k1 in range(distance):
                     for k2 in range(distance):
                         key = f"{i}, {j}"
-                        if key in cell_colors:
+                        if not self.data[i][j].active:
+                            new_data[i*distance+k1][j*distance+k2][0] = self.WALL_COLOR[0]
+                            new_data[i*distance+k1][j*distance+k2][1] = self.WALL_COLOR[1]
+                            new_data[i*distance+k1][j*distance+k2][2] = self.WALL_COLOR[2]
+                        elif key in cell_colors:
                             new_data[i*distance+k1][j*distance+k2][0] = cell_colors[key][0]
                             new_data[i*distance+k1][j*distance+k2][1] = cell_colors[key][1]
                             new_data[i*distance+k1][j*distance+k2][2] = cell_colors[key][2]

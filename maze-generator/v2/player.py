@@ -30,7 +30,7 @@ class Player():
 
         self.pos = Vector2D(self.start)
 
-        self.score = 0
+        self.rounds_won = 0
         self.moved = False
 
         # All cells are tuples (x, y), not Vector2D!
@@ -51,7 +51,10 @@ class Player():
         Also recalculate DFS.
         '''
         self.pos = Vector2D(self.start)
-        self._internal_dfs()
+        self._internal_dfs(ignore_unknowns=True)
+        if len(self.dfs_stack) == 0:
+            self._internal_dfs(ignore_unknowns=False)
+        
 
     # def _move(self, next_cell: tuple | Vector2D):
     def _move(self, next_cell: tuple):
@@ -76,7 +79,9 @@ class Player():
                 self.maze.data[next_cell.x][next_cell.y].visibleA = True
             else:
                 self.maze.data[next_cell.x][next_cell.y].visibleB = True
-            self._internal_dfs()
+            self._internal_dfs(ignore_unknowns=True)
+            if len(self.dfs_stack) == 0:
+                self._internal_dfs(ignore_unknowns=False)
             self.turn_counter = 0
         else:
             # print(f"[ Debug ][ {self.name} ] Moving from {self.pos} to {next_cell}")
@@ -197,10 +202,14 @@ class Player():
             return
 
         if len(self.dfs_stack) == 0:
-            self._internal_dfs()
+            self._internal_dfs(ignore_unknowns=True)
+            if len(self.dfs_stack) == 0:
+                self._internal_dfs(ignore_unknowns=False)
         
         if self.turn_counter >= self.turn_recalculate:
-            self._internal_dfs()
+            self._internal_dfs(ignore_unknowns=True)
+            if len(self.dfs_stack) == 0:
+                self._internal_dfs(ignore_unknowns=False)
             self.turn_counter = 0
         else:
             self.turn_counter += 1
@@ -221,10 +230,12 @@ class Player():
         # Taxi cab
         return abs(x-endx) + abs(y-endy)
 
-    def _internal_dfs(self):
+    def _internal_dfs(self, ignore_unknowns:bool):
         '''
         Perform a new DFS each time a cell adjacent to a previous visited cell or a future cell is discovered.\n
         '''
+
+        self.full_discovered = False
 
         # How much penalty should taking an unknown cell step add to the total distance
         unknown_penalty = 1.2
@@ -236,11 +247,7 @@ class Player():
         self.dfs_stack.append((self.pos.x, self.pos.y))
         visited = []
 
-        while self.dfs_stack[-1] != self.finish:
-            if len(self.dfs_stack) == 0:
-                self.logger.error(f"Could not find a connected path from {self.start} to {self.finish}!", extra={"who": self.name})
-                raise ValueError(f"[{self.name}] Could not find a connected path from {self.start} to {self.finish}!")
-
+        while len(self.dfs_stack) > 0 and self.dfs_stack[-1] != self.finish:
             pqueue = []
             (x, y) = self.dfs_stack[-1]
             visited.append((x, y))
@@ -252,7 +259,7 @@ class Player():
                         if not self.maze.is_wall(x, y, x-1, y):
                             distance = self._distance_metric((x-1, y), self.finish)
                             pqueue.append((x-1, y, distance))
-                    else:
+                    elif not ignore_unknowns:
                         distance = self._distance_metric((x-1, y), self.finish) * unknown_penalty
                         pqueue.append((x-1, y, distance))
             
@@ -263,7 +270,7 @@ class Player():
                         if not self.maze.is_wall(x, y, x, y+1):
                             distance = self._distance_metric((x, y+1), self.finish)
                             pqueue.append((x, y+1, distance))
-                    else:
+                    elif not ignore_unknowns:
                         distance = self._distance_metric((x, y+1), self.finish) * unknown_penalty
                         pqueue.append((x, y+1, distance))
             
@@ -274,7 +281,7 @@ class Player():
                         if not self.maze.is_wall(x, y, x+1, y):
                             distance = self._distance_metric((x+1, y), self.finish)
                             pqueue.append((x+1, y, distance))
-                    else:
+                    elif not ignore_unknowns:
                         distance = self._distance_metric((x+1, y), self.finish) * unknown_penalty
                         pqueue.append((x+1, y, distance))
             
@@ -285,7 +292,7 @@ class Player():
                         if not self.maze.is_wall(x, y, x, y-1):
                             distance = self._distance_metric((x, y-1), self.finish)
                             pqueue.append((x, y-1, distance))
-                    else:
+                    elif not ignore_unknowns:
                         distance = self._distance_metric((x, y-1), self.finish) * unknown_penalty
                         pqueue.append((x, y-1, distance))
 
@@ -295,6 +302,13 @@ class Player():
                 self.dfs_stack.append((pqueue[0][0], pqueue[0][1]))
             else:
                 self.dfs_stack.pop()
+
+        if len(self.dfs_stack) == 0:
+            if ignore_unknowns:
+                return
+            
+            self.logger.error(f"Could not find a connected path from {self.start} to {self.finish}!", extra={"who": self.name})
+            raise ValueError(f"[{self.name}] Could not find a connected path from {self.start} to {self.finish}!")
 
         self.dfs_stack.pop(0)
         # print(f"[ Debug ][ {self.name} ] Recalculated DFS: {self.dfs_stack}")

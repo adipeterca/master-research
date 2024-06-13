@@ -175,8 +175,9 @@ class DFS(MazeSolver):
 
         self.cells = [self.start]
         self.visited = [self.start]
+        self.steps.clear()
 
-        while self.cells[-1] != self.end:       
+        while self.cells[-1] != self.end:
             if len(self.cells) == 0:
                 raise ValueError(f"Could not find a connected path from {self.start} to {self.finish}!")
 
@@ -210,8 +211,9 @@ class DFS(MazeSolver):
             self.cells.pop()
             
         self.steps.append(self.end)
-        # Deep copy the list
-        # This only shows the final steps (we want the FULL search.)
+        # # Deep copy the list
+        # # This only shows the final steps (we want the FULL search.)
+        # self.steps.clear()
         # for cell in self.cells:
         #     self.steps.append(cell)
 
@@ -363,6 +365,8 @@ class AStar(MazeSolver):
 
         @h  : what heuristic function to use. Defaults to classical Euclidian distance.
         '''
+        self.steps.clear()
+
         def _h(start, end):
             (x, y) = start
             (endx, endy) = end
@@ -510,12 +514,14 @@ class ReinforcementLearningSolver(MazeSolver):
         else:
             print(f"Surpassed the maximum allowed number of iterations ({max_iter}).")
         
-
+    
 class DFSHeuristic(MazeSolver):
     def solve(self, h=None):
         '''
         Adds to the stack based on a heuristic distance.
         '''
+        self.steps.clear()
+
 
         def _h(start, end):
             (x, y) = start

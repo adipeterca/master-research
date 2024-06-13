@@ -380,6 +380,7 @@ if __name__ == "__main__":
 
     from logger import console
     from utils import load_dataset
+    from keras.utils import plot_model
 
     console.info('Running in DISCRIMINATOR TESTING mode.')
 
@@ -391,6 +392,9 @@ if __name__ == "__main__":
         disc.summary()
         exit()
 
+    if len(sys.argv) == 3 and sys.argv[2] == 'plot_model':
+        plot_model(disc, show_shapes=True, show_layer_names=True, show_layer_activations=True)
+        exit()
 
     # Random noise
     true = 0
