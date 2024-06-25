@@ -41,6 +41,7 @@ class GameMaster():
     UNKNOWN = (50, 50, 50)
     VIEW_ALL = (180, 180, 180)
     VIEW_HIDDEN = (15, 15, 15)
+    VIEW_HIDDEN = (120, 120, 120)
 
     # GameStates
     NONE = 0
@@ -68,6 +69,7 @@ class GameMaster():
     def __init__(self, maze_algorithm_class: Sculptor = DepthFirstSearch, seed = 0, playerA : Player=None, playerB : Player=None):
         self._maze_algorithm_class = maze_algorithm_class
         self._seed = seed
+        random.seed(self._seed)
 
         self.maze = Maze(10, 10, self.GameCell)
         self.total_possible_negotiations = 0
@@ -84,10 +86,12 @@ class GameMaster():
         # General settings
         pygame.init()
         self.screen = pygame.display.set_mode((self.SCREEN_WIDTH, self.SCREEN_HEIGHT))
-        pygame.display.set_caption("B O T H")
+        pygame.display.set_caption("CoLab")
 
         self.FONT = pygame.freetype.SysFont("bahnschrift", 20)
         self.wall_gap = 5
+
+        self.max_allowed_iterations = 300
 
         # Board settings
         self.board_bk = pygame.Rect((150, 50, 500+self.wall_gap, 500+self.wall_gap))
@@ -205,6 +209,25 @@ class GameMaster():
         self.playerB.finish = finish_B
         self.playerB.reset_position()
 
+    def _draw_trajectory(self, player: Player):
+
+        curr_cell = player.pos.to_tuple()
+        for next_cell in player.dfs_stack:
+            # Current position as a cell
+            cp = (
+                self.board_bk.left + curr_cell[1]*self.board_cell.width + (curr_cell[1]+1)*self.wall_gap + self.cell_width // 2,
+                self.board_bk.top + curr_cell[0]*self.board_cell.height + (curr_cell[0]+1)*self.wall_gap + self.cell_height // 2
+            )
+
+            np = (
+                self.board_bk.left + next_cell[1]*self.board_cell.width + (next_cell[1]+1)*self.wall_gap + self.cell_width // 2,
+                self.board_bk.top + next_cell[0]*self.board_cell.height + (next_cell[0]+1)*self.wall_gap + self.cell_height // 2
+            )
+
+            pygame.draw.line(self.screen, (255, 150, 10), cp, np, 3)
+            curr_cell = next_cell
+
+
     def _draw_screen(self):
         self.screen.fill((255, 255, 255))
         self.screen.fill((0, 0, 0), self.board_bk)
@@ -277,6 +300,8 @@ class GameMaster():
         self.FONT.render_to(self.screen, (self.SCREEN_WIDTH-120, self.SCREEN_HEIGHT//2-25), f"TO FINISH", (0, 0, 0))
         self.FONT.render_to(self.screen, (self.SCREEN_WIDTH-100, self.SCREEN_HEIGHT//2), f"A: {len(self.playerA.dfs_stack)}", self.PLAYER_A)
         self.FONT.render_to(self.screen, (self.SCREEN_WIDTH-100, self.SCREEN_HEIGHT//2+25), f"B: {len(self.playerB.dfs_stack)}", self.PLAYER_B)
+
+        # self._draw_trajectory(self.playerA)
 
         pygame.display.update()
 
@@ -391,8 +416,7 @@ class GameMaster():
             # self.state = self.RUNNING
             self.set_state(self.RUNNING)
         
-        if self.iteration >= 300:
-            # print("[ Info ][ GameMaster ] Iteration count over 500. Marking the game as a draw.")
+        if self.iteration >= self.max_allowed_iterations:
             self.logger.info("Iteration count over 300. Marking the game as a draw.", extra={"who": "GameMaster"})
             # self.state = self.DRAW
             self.set_state(self.DRAW)

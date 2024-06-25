@@ -128,7 +128,7 @@ class MazeSolver:
         frames[0].save(path, format="GIF", append_images=frames, save_all=True, duration=50)
         print(f"GIF created at {path}")
 
-    def image(self, path):
+    def image(self, path, cell_colors=None):
         '''
         Creates a static image at path @path representing the calculated solution.
         '''
@@ -138,10 +138,10 @@ class MazeSolver:
         
         distance = 10
 
-        cell_colors = {
-            f"{self.start[0]}, {self.start[1]}" : Maze.START_COLOR,
-            f"{self.end[0]}, {self.end[1]}" : Maze.END_COLOR
-        }
+        # cell_colors = {
+        #     f"{self.start[0]}, {self.start[1]}" : Maze.START_COLOR,
+        #     f"{self.end[0]}, {self.end[1]}" : Maze.END_COLOR
+        # }
 
         image = self.maze.export(show=False, distance=distance, cell_colors=cell_colors)
         draw_image = ImageDraw.Draw(image)
@@ -159,7 +159,7 @@ class MazeSolver:
         
 
         for i in range(1, len(self.steps)):
-            draw_image.line((self.steps[i-1], self.steps[i]), fill='red', width=3)        
+            draw_image.line((self.steps[i-1], self.steps[i]), fill='white', width=1)        
 
         image.save(path)
         print(f"Image created at {path}")

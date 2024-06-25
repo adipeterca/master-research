@@ -1,4 +1,4 @@
-from both import GameMaster
+from colab import GameMaster
 from strategies import SimpleAgent
 
 import random
@@ -15,12 +15,12 @@ if __name__ == "__main__":
 
     start_time = datetime.now()
 
-    GENERATIONS = 5
+    GENERATIONS = 20
     CHROMOSOME_LENGTH = SimpleAgent.CHROMOSOME_LENGTH
     POP_SIZE = 8          # Aim for an even number (see crossover)
     POPULATION = []
 
-    MUTATION_CHANCE = 0.3
+    MUTATION_CHANCE = 0.1
     CROSSOVER_CHANCE = 0.8
 
     best_strategy = None

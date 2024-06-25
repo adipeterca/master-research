@@ -56,8 +56,8 @@ class Player():
             self._internal_dfs(ignore_unknowns=False)
         
 
-    # def _move(self, next_cell: tuple | Vector2D):
-    def _move(self, next_cell: tuple):
+    # def _move(self, next_cell: tuple):
+    def _move(self, next_cell: tuple | Vector2D):
         if not isinstance(next_cell, tuple) and not isinstance(next_cell, Vector2D):
             self.logger.error(f"Invalid type for direction <{next_cell}> provided: {type(next_cell)}", extra={"who": self.name})
             raise TypeError(f"[ {self.name} ] Invalid type for direction <{next_cell}> provided: {type(next_cell)}")
@@ -202,19 +202,22 @@ class Player():
             return
 
         if len(self.dfs_stack) == 0:
+            self.logger.debug("DFS stack size is 0. Computing a path IGNORING unknown steps.", extra={"who": self.name})
             self._internal_dfs(ignore_unknowns=True)
             if len(self.dfs_stack) == 0:
+                self.logger.debug("DFS stack size is still 0, meaning that a path while ignoring unknown cells was not found.", extra={"who": self.name})
                 self._internal_dfs(ignore_unknowns=False)
         
         if self.turn_counter >= self.turn_recalculate:
+            self.logger.debug("DFS turn recalcuation in progress... Computing a path IGNORING unknown steps.", extra={"who": self.name})
             self._internal_dfs(ignore_unknowns=True)
             if len(self.dfs_stack) == 0:
+                self.logger.debug("DFS turn recalcuation done. DFS stack size is still 0, meaning that a path while ignoring unknown cells was not found.", extra={"who": self.name})
                 self._internal_dfs(ignore_unknowns=False)
             self.turn_counter = 0
         else:
             self.turn_counter += 1
         
-        # print(f"[ Debug ][ {self.name} ] Trying to pop from DFS stack the next move...")
         self.logger.debug("Trying to pop from DFS stack the next move...", extra={"who": self.name})
         self._move(self.dfs_stack.pop(0))
 

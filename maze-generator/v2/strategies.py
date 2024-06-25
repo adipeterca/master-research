@@ -1,4 +1,3 @@
-from pygame import Rect
 from amazed.modules.maze import Maze
 from player import *
 
@@ -347,6 +346,7 @@ class SimpleAgent(Player):
         # print(f"\t\t\t current score : {curr_score}")
         # print(f"\t\t\t current score adjusted [0, 15] : {curr_score_adj}")
         # print(f"\t\t\t score threshold : {self.score_threshold}")
+
         return curr_score_adj <= self.score_threshold
     
     def _internal_dfs(self, ignore_unknowns:bool):
@@ -423,14 +423,22 @@ class SimpleAgent(Player):
                 pqueue.sort(key=lambda tup:tup[2])
 
                 index = 0
-                while random.random() <= self.dfs_exploration_chance:
+                
+                # while random.random() <= self.dfs_exploration_chance:
                     
-                    # This is to avoid selecting a cell that does not exist in the priority queue
-                    if index == len(pqueue) - 1:
-                        break
+                #     # This is to avoid selecting a cell that does not exist in the priority queue
+                #     if index == len(pqueue) - 1:
+                #         break
 
-                    index += 1
+                #     index += 1
+                #     self.dfs_exploration_chance *= 0.95
+
+                if len(pqueue) > 1 and random.random() <= self.dfs_exploration_chance:
+                    index = random.randint(1, len(pqueue)-1)
+                    self.logger.debug(f"I prefered to go with {pqueue[index]} with index={index} instead of {pqueue[0]} because I am exploring! My exploration chance is {self.dfs_exploration_chance}.", extra={"who": self.name})
                     self.dfs_exploration_chance *= 0.95
+                else:
+                    self.logger.debug(f"Right now I went with the best choice, that being {pqueue[0]}!", extra={"who": self.name})
 
                 self.dfs_stack.append((pqueue[index][0], pqueue[index][1]))
             else:

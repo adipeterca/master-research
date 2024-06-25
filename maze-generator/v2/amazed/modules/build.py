@@ -11,7 +11,7 @@ class Sculptor():
     Default class for all maze generation classes.\n
     Carves a maze in-place.
     '''
-    def __init__(self, maze: Maze, seed: int = None, gif: bool = True) -> None:
+    def __init__(self, maze: Maze, seed: int = None, gif: bool = False) -> None:
         self.maze = maze
         self.frames = []
         self.seed = random.random() if seed is None else seed
@@ -72,7 +72,7 @@ class Sculptor():
 
 
 class BinaryTree(Sculptor):
-    def __init__(self, maze: Maze, seed: int = None, gif: bool = True) -> None:
+    def __init__(self, maze: Maze, seed: int = None, gif: bool = False) -> None:
         super().__init__(maze, seed, gif)
 
         if gif:
@@ -100,7 +100,7 @@ class BinaryTree(Sculptor):
                     self.add_frame(i, j)
 
 class HuntAndKill(Sculptor):
-    def __init__(self, maze: Maze, seed: int = None, gif: bool = True, x: int = 0, y: int = 0) -> None:
+    def __init__(self, maze: Maze, seed: int = None, gif: bool = False, x: int = 0, y: int = 0) -> None:
         super().__init__(maze, seed, gif)
 
         visited = np.zeros((maze.rows, maze.columns))
@@ -185,7 +185,7 @@ class HuntAndKill(Sculptor):
             self.add_frame(x, y)
 
 class DepthFirstSearch(Sculptor):
-    def __init__(self, maze: Maze, seed: int = None, gif: bool = True, x: int = 0, y: int = 0, randomized: bool = True, biased_dirs: list = None, biased_level: int = 0) -> None:
+    def __init__(self, maze: Maze, seed: int = None, gif: bool = False, x: int = 0, y: int = 0, randomized: bool = True, biased_dirs: list = None, biased_level: int = 0) -> None:
         super().__init__(maze, seed, gif)
 
         if gif:
@@ -263,7 +263,7 @@ class DepthFirstSearch(Sculptor):
             self.add_frame(0, 0)
             
 class RandomKruskal(Sculptor):
-    def __init__(self, maze: Maze, seed: int = None, gif: bool = True) -> None:
+    def __init__(self, maze: Maze, seed: int = None, gif: bool = False) -> None:
         super().__init__(maze, seed, gif)
         
         if gif:
@@ -317,7 +317,7 @@ class RandomKruskal(Sculptor):
                     self.add_frame(x2, y2)
 
 class AldousBroder(Sculptor):
-    def __init__(self, maze: Maze, seed: int = None, gif: bool = True) -> None:
+    def __init__(self, maze: Maze, seed: int = None, gif: bool = False) -> None:
         super().__init__(maze, seed, gif)
 
         visited = np.full((maze.rows, maze.columns), False)
@@ -359,7 +359,7 @@ class AldousBroder(Sculptor):
                 x, y = possible_directions[0]
 
 class RandomCarving(Sculptor):
-    def __init__(self, maze: Maze, seed: int = None, gif: bool = True, original_chance:int = 0.05, multicell:bool = True, adaptive:bool = True, adaptive_function = None) -> None:
+    def __init__(self, maze: Maze, seed: int = None, gif: bool = False, original_chance:int = 0.05, multicell:bool = True, adaptive:bool = True, adaptive_function = None) -> None:
         '''
         Break walls at random in the given @maze. Can be used as a method of creating multiple paths in a single-solution maze.
 
@@ -426,7 +426,7 @@ class RandomCarving(Sculptor):
         return chance + streak * 0.3
     
 class Spiral(Sculptor):
-    def __init__(self, maze: Maze, seed: int = None, gif: bool = True, x:int = 0, y:int = 0, max_len:int = 10) -> None:
+    def __init__(self, maze: Maze, seed: int = None, gif: bool = False, x:int = 0, y:int = 0, max_len:int = 10) -> None:
         '''
         Inspired by hunt and kill.
         Select the starting node as (x, y)\n.
@@ -537,7 +537,7 @@ class Spiral(Sculptor):
                     i += 1
 
 class Sidewinder(Sculptor):
-    def __init__(self, maze: Maze, seed: int = None, gif: bool = True) -> None:
+    def __init__(self, maze: Maze, seed: int = None, gif: bool = False) -> None:
         super().__init__(maze, seed, gif)
 
         if gif:
@@ -570,7 +570,7 @@ class Sidewinder(Sculptor):
                     self.add_frame(i, j)
 
 class RandomPrim(Sculptor):
-    def __init__(self, maze: Maze, seed: int = None, gif: bool = True, x: int = None, y: int = None) -> None:
+    def __init__(self, maze: Maze, seed: int = None, gif: bool = False, x: int = None, y: int = None) -> None:
         '''
         If @x and @y are left as None, they start off from the center of the maze.
         '''
@@ -619,7 +619,7 @@ class RandomPrim(Sculptor):
                 self.add_frame(x2, y2)
 
 class RecursiveDivision(Sculptor):
-    def __init__(self, maze: Maze, seed: int = None, gif: bool = True) -> None:
+    def __init__(self, maze: Maze, seed: int = None, gif: bool = False) -> None:
         super().__init__(maze, seed, gif)
 
         self.__recursive_division__(0, maze.rows-1, 0, maze.columns-1)
@@ -678,7 +678,7 @@ class WallsCellularAutomata(Sculptor):
     '001': '1',\n
     '000': '0'
     '''
-    def __init__(self, maze: Maze, seed: int = None, gif: bool = True, generations:int=10, rules:dict=None) -> None:
+    def __init__(self, maze: Maze, seed: int = None, gif: bool = False, generations:int=10, rules:dict=None) -> None:
 
         super().__init__(maze, seed, gif)
 
@@ -721,7 +721,7 @@ class WallsCellularAutomata(Sculptor):
 
 class GeneticAlgorithm(Sculptor):
     
-    def __init__(self, maze: Maze, seed: int = None, gif: bool = True, parameters:dict = None, autorun:bool=True) -> None:
+    def __init__(self, maze: Maze, seed: int = None, gif: bool = False, parameters:dict = None, autorun:bool=True) -> None:
         '''
         Class that uses a genetic algorithm to evolve a maze. It heavy relies on the @parameters dictionary, so make
         sure that all values are correct.
@@ -918,3 +918,24 @@ class GeneticAlgorithm(Sculptor):
         frame = self.maze.export(show=False)
         self.frames.append(frame)
 
+class NaturalLanguage(Sculptor):
+    '''
+    UNDER DEVELOPMENT
+
+    Using natural language, build a maze based on a set of predefined instructions.
+
+    Available commands:
+    * START FROM [X], [Y] - sets the current position
+    * MOVE [N/E/S/W/NORTH/SOUTH/EAST/WEST] - move in the disered position, without carving a path.
+    * CARVE [N/E/S/W/NORTH/SOUTH/EAST/WEST] - carve a path in the disired position (if it already exists, do nothing)
+    * BUILD [N/E/S/W/NORTH/SOUTH/EAST/WEST] - add a wall in the disired position (if it already exists, do nothing)
+    * T intersection
+    * Loop
+    * zig zag
+    * cross intersection
+    * RANDOM WALK [FROM [X], [Y]] TO [X], [Y] - "FROM" is optional
+    * STRAIGHT WALK [FROM [X], [Y]] TO [X], [Y] - "FROM" is optional
+    * AT THE [X]'TH INTERSECTION, TURN [N/W/E/S]
+    * GO UNTIL [CONDITION]
+    * FOLLOW THE WALL UNTIL [CONDITION]
+    '''
